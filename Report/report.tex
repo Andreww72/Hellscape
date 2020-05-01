@@ -1,0 +1,166 @@
+\documentclass{article}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[margin=18mm]{geometry}
+\usepackage{titling}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{lstautogobble}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage[square,numbers]{natbib}
+\usepackage[breaklinks=true]{hyperref}
+\usepackage{subcaption}
+\title{EGH456 Assignment 1 - Embedded Control of Electric Vehicle Motor System}
+\author{Andrew Mather\and Jeremy Sheather\and Lachlan Kehr\and Tristan Bellingham}
+\date{\today}
+
+
+\newcommand{\newpar}{\vspace{5mm}\noindent}
+\newcommand{\sectionbreak}{\clearpage}
+\newcommand{\TODO}[1]{{\color{red}#1}}
+\newcommand{\G}[1]{{\color{green}#1}}
+\newcommand{\studentnumbers}{n9960325} % TODO: put in the same order as the \author
+
+\graphicspath{{images/}}
+
+\lstdefinestyle{c}{ % TODO: make this look better
+  autogobble,
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{purple!40!black},
+  commentstyle=\itshape\color{green!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}
+\lstset{style=c}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\theauthor} % TODO: might wanna change that since there are 4 authors (perhaps firstnames only?)
+\rhead{\studentnumbers}
+\cfoot{Page \thepage}
+
+\setcounter{secnumdepth}{-1}
+
+\begin{document}
+    \begin{titlepage}
+		\centering
+		\rule{\textwidth}{1pt}
+		\vspace{5mm}
+
+		{\huge\thetitle}
+
+		\vspace{20mm}
+
+		{\Large Names: \theauthor}
+
+		{\Large Student Numbers: \studentnumbers}
+
+		\vspace{5mm}
+
+		{\large Due Date: like week 12} % TODO: put the actual due date
+		
+		\vspace{5mm}
+
+		\vspace*{\fill} 
+    \end{titlepage}
+
+    \tableofcontents
+
+    \section{Introduction}
+        This is the introduction
+
+        \newpar Notice how this is a new paragraph and all you had to add was \textbf{\textbackslash newpar}? There's no vspace or noindent, that is already done in a function.
+
+
+
+    \section{Section 1}
+        Notice how this Section is on a new page and you didn't have to add a \textbackslash clearpage?
+
+        \newpar Well if I see one in the document body you fuckers better have a good damn explanation for it being there.
+
+        \newpar Also, here is some code, you can manually set the highlighting but I have set it to \textbf{C} for now. We likely won't need any other ones.
+
+        % consider lstinputlisting if you wanna load code from a file
+        \begin{lstlisting}
+            #include<stdio.h>
+
+            int main(){
+                printf("This is a code section. Use it wisely.\n");
+                return 0;
+            }
+        \end{lstlisting}
+
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.4\linewidth]{angery.png}
+            \caption{This is my favourite image.}
+            \label{fig:angery1}
+        \end{figure}
+
+        \begin{figure}[H]
+            \begin{subfigure}[H]{0.19\linewidth} % not 0.2 to avoid overfull hbox
+                \includegraphics[width=\linewidth]{angery.png}
+                \caption{Subfig1}
+            \end{subfigure}
+            \begin{subfigure}[H]{0.8\linewidth}
+                \includegraphics[width=\linewidth]{angery.png}
+            \end{subfigure}
+            \caption{Subfigures example}
+            \label{fig:subAngeries}
+        \end{figure}
+
+    \appendix
+
+    % TODO: delete `Examples' section before final submission
+    \section{Examples}
+        I will also include the code and figures examples in the appendix. You can delete the ones in the body but not the ones in the appendix.
+        
+        \newpar Notice how this Section is on a new page and you didn't have to add a \textbackslash clearpage?
+
+        \newpar Well if I see one in the document body you fuckers better have a good damn explanation for it being there.
+
+        \newpar Also, here is some code, you can manually set the highlighting but I have set it to \textbf{C} for now. We likely won't need any other ones.
+    
+        % consider lstinputlisting if you wanna load code from a file
+        \begin{lstlisting}
+            #include<stdio.h>
+
+            int main(){
+                printf("This is a code section. Use it wisely.\n");
+                return 0;
+            }
+        \end{lstlisting}
+
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.4\linewidth]{angery.png}
+            \caption{This is my favourite image.}
+            \label{fig:angery1}
+        \end{figure}
+
+        \begin{figure}[H]
+            \begin{subfigure}[H]{0.19\linewidth} % not 0.2 to avoid overfull hbox
+                \includegraphics[width=\linewidth]{angery.png}
+                \caption{Subfig1}
+            \end{subfigure}
+            \begin{subfigure}[H]{0.8\linewidth}
+                \includegraphics[width=\linewidth]{angery.png}
+                \caption{Subfig2}
+            \end{subfigure}
+            \caption{Subfigures example}
+            \label{fig:subAngeries}
+        \end{figure}
+
+
+
+\end{document}
