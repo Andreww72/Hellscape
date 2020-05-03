@@ -1,5 +1,6 @@
 /* XDCtools Header files */
 #include <xdc/std.h>
+#include <xdc/runtime/System.h>
 
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
@@ -38,6 +39,7 @@
 #include "utils/cmdline.h"
 #include "drivers/pinout.h"
 #include "ui/user_interface.h"
+#include "motor/motor_api.h"
 
 #define TASKSTACKSIZE   2048
 
@@ -62,6 +64,10 @@ int main(void)
     Board_initGeneral();
     Board_initGPIO();
 
+    bool motorLibSuccess = initMotor();
+    System_printf("%d\n", motorLibSuccess);
+    System_flush();
+
     /* Set system clock */
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
@@ -82,6 +88,7 @@ int main(void)
 
     /* Start BIOS */
     BIOS_start();
+
 
     return (0);
 }
