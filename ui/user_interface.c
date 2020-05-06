@@ -1,30 +1,35 @@
 #include "user_interface.h"
 #include <driverlib/gpio.h>
+#include <driverlib/interrupt.h>
+#include <inc/hw_ints.h>
+#include <time.h>
+#include <stdio.h>
 #include "grlib/widget.h"
 #include "grlib/canvas.h"
+#include "grlib/pushbutton.h"
 #include "drivers/pinout.h"
 #include "drivers/frame.h"
-#include "ui/interface_button.h"
-
-tCanvasWidget g_sBackground;
-Canvas(g_sBackground, WIDGET_ROOT, 0, 0,
-       &g_sKentec320x240x16_SSD2119, 10, 25, 300, (240 - 25 -10),
-       CANVAS_STYLE_FILL, ClrBlue, 0, 0, 0, 0, 0, 0);
-
+#include "drivers/touch.h"
+#include "constants.h"
+#include "tabs.h"
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext)
 {
-    PinoutSet(false, false);
+    // Init the display driver
     Kentec320x240x16_SSD2119Init(systemclock);
+
+    // Init Graphics Context
     GrContextInit(sContext, &g_sKentec320x240x16_SSD2119);
 
-    initInterfaceButton();
-
-    // Root
-    WidgetAdd(WIDGET_ROOT, (tWidget *)&g_sBackground);
-
+    // Draw frame
     FrameDraw(sContext, "Motor Controller - Group 7");
 
-    WidgetPaint(WIDGET_ROOT);
+    // Setup tabs
+    setup_tabs();
 
+    WidgetPaint(WIDGET_ROOT);
+}
+
+void UserInterfaceDraw(tContext * sContext) {
+    WidgetMessageQueueProcess();
 }

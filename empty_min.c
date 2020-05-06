@@ -4,6 +4,8 @@
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
+#include <ti/sysbios/hal/Hwi.h>
+#include <ti/sysbios/knl/Clock.h>
 
 /* TI-RTOS Header files */
 #include <ti/drivers/GPIO.h>
@@ -37,22 +39,31 @@
 #include "utils/uartstdio.h"
 #include "utils/cmdline.h"
 #include "drivers/pinout.h"
+#include "drivers/touch.h"
+#include "grlib/grlib.h"
+#include "grlib/widget.h"
 #include "ui/user_interface.h"
 
-#define TASKSTACKSIZE   2048
+#define TASKSTACKSIZE   4096
 
 Char taskStack[TASKSTACKSIZE];
 
 tContext sContext;
 
+extern void TouchScreenIntHandler(void);
+
 void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
-
     while(1)
     {
-        //UserInterfaceDraw(&uiParams, &sContext, &motorParams, &currentParams, &tempParams);
+        UserInterfaceDraw(&sContext);
     }
+
+
+}
+
+void hallInterruptFxn() {
 
 }
 
@@ -67,15 +78,31 @@ int main(void)
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
             SYSCTL_CFG_VCO_480), 120000000);
 
+    // Enable interrupts
+    IntMasterEnable();
+
+    // Set pinout
+    PinoutSet(false, false);
+
+    // Need this for Touchscreen
+    Hwi_Params hwiParams;
+    Hwi_Params_init(&hwiParams);
+    hwiParams.arg = 1;
+    hwiParams.priority = 1;
+    Hwi_Handle hallInt0 = Hwi_create(33, (Hwi_FuncPtr)TouchScreenIntHandler, &hwiParams, NULL);
+
+    // Init touchscreen
+    TouchScreenInit(ui32SysClock);
+    TouchScreenCallbackSet(WidgetPointerMessage);
+
     /* Init UI task */
     Task_Params taskParams;
     Task_Params_init(&taskParams);
     taskParams.stackSize = TASKSTACKSIZE;
-    taskParams.priority = 5;
+    taskParams.priority = 10;
     taskParams.stack = &taskStack;
     taskParams.arg0 = ui32SysClock;
     Task_Handle uiTask = Task_create((Task_FuncPtr)userInterfaceFxn, &taskParams, NULL);
-
 
     /* Turn on user LED  */
     GPIO_write(Board_LED0, Board_LED_ON);

@@ -14,5 +14,6 @@
 #include "drivers/Kentec320x240x16_ssd2119_spi.h"
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
+void UserInterfaceDraw(tContext * sContext);
 
 #endif /* UI_USER_INTERFACE_H_ */
