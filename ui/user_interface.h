@@ -13,6 +13,11 @@
 #include "grlib/grlib.h"
 #include "drivers/Kentec320x240x16_ssd2119_spi.h"
 
+static char * getCurrentDateTime();
+void DrawDateTime();
+static void DrawHomeScreen();
+static void DrawSetMenuScreen(tContext * sContext);
+
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);
 
