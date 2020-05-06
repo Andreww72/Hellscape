@@ -40,6 +40,7 @@
 #include "drivers/pinout.h"
 #include "ui/user_interface.h"
 #include "motor/motor_api.h"
+#include "sensors/sensor_api.h"
 
 #define TASKSTACKSIZE   2048
 
@@ -63,6 +64,8 @@ int main(void)
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+
+    sensor_init();
 
     bool motorLibSuccess = initMotor();
     System_printf("%d\n", motorLibSuccess);
