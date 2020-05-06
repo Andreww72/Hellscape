@@ -1,5 +1,7 @@
 Debug
 
+**.prefs
+
 # latex ignore files
 report.pdf
 *.log
