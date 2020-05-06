@@ -65,7 +65,7 @@ int main(void)
     Board_initGeneral();
     Board_initGPIO();
 
-    sensor_init();
+    init_sensors();
 
     bool motorLibSuccess = initMotor();
     System_printf("%d\n", motorLibSuccess);
