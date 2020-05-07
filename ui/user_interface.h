@@ -18,6 +18,8 @@ int motorSpeedLimit;
 int motorCurrentLimit;
 int motorAccelerationLimit;
 
+uint16_t drawingGraph;
+
 enum page {
     temperature = 0,
     motor = 1,
@@ -43,6 +45,8 @@ static void decreaseSetting();
 static void StartStopMotor();
 
 static void SetupGraphScreen();
+static void DrawDataOnGraph();
+static void returnFromGraph();
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);
