@@ -1,1 +1,13 @@
 Debug
+
+# latex ignore files
+report.pdf
+*.log
+*.aux
+*.fls
+*.fdb_latexmk
+*.gz
+*.out
+*.toc
+*.bbl
+*.blg
