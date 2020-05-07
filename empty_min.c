@@ -74,15 +74,7 @@ static char * getCurrentDateTime()
 // Draws the date, time and lux sensor results to the title bar
 void DrawDateTime()
 {
-    // Day time
-    GrContextForegroundSet(&sContext, 0x00D8D4D5);
-    GrCircleFill(&sContext,5, 5,10);
-    GrContextForegroundSet(&sContext, 0x007584AD);
-    GrLineDraw(&sContext,15, 15, 20, 20);
-    GrLineDraw(&sContext,18, 10, 23, 13);
-    GrLineDraw(&sContext,19, 5,25,6);
-
-    GrContextBackgroundSet(&sContext, 0x007584AD);
+    GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);
     GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
@@ -139,8 +131,8 @@ bool setupGUI(uint32_t ui32SysClock) {
     clkParamsGUI.startFlag = TRUE;
     taskParams.priority = 15;
     Error_Block eb;
-    //Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
-    //                                      5000, &clkParamsGUI, &eb);
+  ////Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
+  ////                                      5000, &clkParamsGUI, &eb);
     return 1;
 }
 
