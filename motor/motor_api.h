@@ -7,6 +7,7 @@
 
 
 #include <stdbool.h>
+#include <xdc/runtime/Error.h>
 #include "drivers/motorlib.h"
 
 /**

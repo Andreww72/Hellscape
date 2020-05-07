@@ -8,9 +8,10 @@
 #include "motor_api.h"
 
 bool initMotor() {
-    bool return_val;
+    bool return_val = false;
+    Error_Block *eb;
 
-    return_val = initMotorLib(10);
+    return_val = initMotorLib(50, eb);
     enableMotor();
 
     return return_val;

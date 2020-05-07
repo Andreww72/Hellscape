@@ -1,6 +1,6 @@
 /* XDCtools Header files */
 #include <xdc/std.h>
-#include <xdc/runtime/System.h>
+//#include <xdc/runtime/System.h>
 
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
@@ -44,6 +44,7 @@
 #define TASKSTACKSIZE   2048
 
 Char taskStack[TASKSTACKSIZE];
+Char taskStack2[TASKSTACKSIZE];
 
 tContext sContext;
 
@@ -51,11 +52,17 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
 
-    while(1)
-    {
-        //UserInterfaceDraw(&uiParams, &sContext, &motorParams, &currentParams, &tempParams);
+    if (!initMotor()) {
+//        System_printf("Motorlib initialisation failed...");
+//        System_flush();
+        while (1) {
+
+        }
     }
 
+    while (1) {
+
+    }
 }
 
 int main(void)
@@ -63,10 +70,6 @@ int main(void)
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
-
-    bool motorLibSuccess = initMotor();
-    System_printf("%d\n", motorLibSuccess);
-    System_flush();
 
     /* Set system clock */
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
@@ -81,7 +84,6 @@ int main(void)
     taskParams.stack = &taskStack;
     taskParams.arg0 = ui32SysClock;
     Task_Handle uiTask = Task_create((Task_FuncPtr)userInterfaceFxn, &taskParams, NULL);
-
 
     /* Turn on user LED  */
     GPIO_write(Board_LED0, Board_LED_ON);
