@@ -12,7 +12,6 @@
 /* TI-RTOS Header files */
 #include <ti/drivers/GPIO.h>
 
-
 /* Board Header file */
 #include "Board.h"
 

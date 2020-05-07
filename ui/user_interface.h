@@ -42,6 +42,8 @@ static void decreaseSetting();
 
 static void StartStopMotor();
 
+static void SetupGraphScreen();
+
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);
 

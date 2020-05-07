@@ -16,6 +16,8 @@
 #include <ti/sysbios/knl/Clock.h>
 #include <xdc/runtime/System.h>
 
+extern tContext sContext;
+
 // Keep track of which settings page we're on
 int settingsPageIdentifier = temperature;
 
@@ -95,7 +97,7 @@ RectangularButton(g_sGraphPower, &g_sMenuGraphPage, 0, 0,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Power", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Power", 0, 0, 0, 0, SetupGraphScreen);
 RectangularButton(g_sGraphAmbientTemp, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 113, 30, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
@@ -187,7 +189,7 @@ RectangularButton(g_sGraphActBack, &g_sGraphPage, 0, 0,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Back", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Back", 0, 0, 0, 0, DrawGraphMenuScreen);
 
 void removeAllWidgets() {
     WidgetRemove((tWidget *)(&g_sMenuTypePage));
@@ -323,6 +325,35 @@ static void StartStopMotor() {
         motorState = 0;
     }
     WidgetPaint((tWidget *) &g_sMotorOption);
+    GrStringDraw(&sContext, "test", -1, 100, 25, true);
+}
+
+// Setup graphing screen
+static void SetupGraphScreen()
+{
+    // Remove and paint
+    removeAllWidgets();
+    WidgetPaint((tWidget *) &g_sGraphPage);
+    WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sGraphPage);
+    WidgetMessageQueueProcess();
+
+    // Draw the graph
+    GrStringDraw(&sContext, "Time", -1, 130, 202, false);
+    GrLineDrawV(&sContext, 10, 45, 200);
+    GrLineDrawH(&sContext, 10, 305,200);
+    GrLineDraw(&sContext, 10, 45, 8,50);
+    GrLineDraw(&sContext, 10, 45, 12, 50);
+    GrLineDraw(&sContext, 305, 200, 303, 198);
+    GrLineDraw(&sContext, 305, 200, 303, 202);
+
+    // Tick marks
+    GrLineDraw(&sContext, 300, 195, 300, 205);
+    GrLineDraw(&sContext, 5, 55, 15, 55);
+
+    // Plot title, and y-axis limits
+    GrStringDraw(&sContext, "Test", -1, 100, 25, true);
+    GrStringDraw(&sContext, "0", -1, 10, 202, false);
+    GrStringDraw(&sContext, "100", -1, 18, 38, false);
 }
 
 void initSettingValues() {
