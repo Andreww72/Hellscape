@@ -285,22 +285,22 @@ static void DrawAccelerationSettingsPage()
     WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sSettingPage);
 }
 
-static void increaseSetting() {
+static void doChangeToSetting(int amount) {
     switch (settingsPageIdentifier) {
         case temperature:
-            motorTemperatureLimit += 5;
+            motorTemperatureLimit += amount;
             DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
             break;
         case motor:
-            motorSpeedLimit += 5;
+            motorSpeedLimit += amount;
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
             break;
         case current:
-            motorCurrentLimit += 5;
+            motorCurrentLimit += amount;
             DrawSettingsParameters("Current Limit", "Amps", motorCurrentLimit);
             break;
         case acceleration:
-            motorAccelerationLimit += 5;
+            motorAccelerationLimit += amount;
             DrawSettingsParameters("Acceleration Limit", "m/s^2", motorAccelerationLimit);
             break;
         default:
@@ -308,27 +308,12 @@ static void increaseSetting() {
     }
 }
 
+static void increaseSetting() {
+    doChangeToSetting(5);
+}
+
 static void decreaseSetting() {
-    switch (settingsPageIdentifier) {
-        case temperature:
-            motorTemperatureLimit -= 5;
-            DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
-            break;
-        case motor:
-            motorSpeedLimit -= 5;
-            DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
-            break;
-        case current:
-            motorCurrentLimit -= 5;
-            DrawSettingsParameters("Current Limit", "Amps", motorCurrentLimit);
-            break;
-        case acceleration:
-            motorAccelerationLimit -= 5;
-            DrawSettingsParameters("Acceleration Limit", "m/s^2", motorAccelerationLimit);
-            break;
-        default:
-            System_printf("You shouldn't be here...");
-    }
+    doChangeToSetting(-5);
 }
 
 int motorState = 0;
