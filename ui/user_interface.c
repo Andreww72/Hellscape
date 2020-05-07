@@ -20,11 +20,11 @@
 #define POWER_VAL_LOW 0
 #define POWER_VAL_HIGH 100
 #define AMB_TEMP_VAL_LOW 0
-#define AMB_TEMPVAL_HIGH 100
+#define AMB_TEMP_VAL_HIGH 100
 #define SPEED_VAL_LOW 0
-#define SPEEDVAL_HIGH 100
+#define SPEED_VAL_HIGH 100
 #define ACCELERATION_VAL_LOW 0
-#define ACCELERATIONVAL_HIGH 100
+#define ACCELERATION_VAL_HIGH 100
 #define MOTOR_TEMP_VAL_LOW 0
 #define MOTOR_TEMP_VAL_HIGH 100
 #define LIGHT_VAL_LOW 0
@@ -112,38 +112,37 @@ RectangularButton(g_sGraphPower, &g_sMenuGraphPage, 0, 0,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Power", 0, 0, 0, 0, SetupGraphScreen);
+                   g_psFontCmss18b, "Power", 0, 0, 0, 0, drawPowerGraph);
 RectangularButton(g_sGraphAmbientTemp, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 113, 30, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Amb Temp", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Amb Temp", 0, 0, 0, 0, drawAmbientTemperatureGraph);
 RectangularButton(g_sGraphSpeed, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 214, 30, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Speed", 0, 0, 0, 0, 0);
-
+                   g_psFontCmss18b, "Speed", 0, 0, 0, 0, drawSpeedGraph);
 RectangularButton(g_sGraphAccel, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 10, 115, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Acceleration", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Acceleration", 0, 0, 0, 0, drawAccelerationGraph);
 RectangularButton(g_sGraphMotorTemp, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 113, 115, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Motor Temp", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Motor Temp", 0, 0, 0, 0, drawMotorTemperatureGraph);
 RectangularButton(g_sGraphLight, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 214, 115, 96, 80,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
-                   g_psFontCmss18b, "Light", 0, 0, 0, 0, 0);
+                   g_psFontCmss18b, "Light", 0, 0, 0, 0, drawLightGraph);
 RectangularButton(g_sGraphBack, &g_sMenuGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 10, 200, 300, 35,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
@@ -328,9 +327,43 @@ static void StartStopMotor() {
     WidgetPaint((tWidget *) &g_sMotorOption);
 }
 
-// Setup graphing screen
-static void SetupGraphScreen()
+static void drawPowerGraph()
 {
+    SetupGraphScreen("Power Graph (Watts)", POWER_VAL_LOW, POWER_VAL_HIGH);
+}
+
+static void drawAmbientTemperatureGraph()
+{
+    SetupGraphScreen("Ambient Temperature (Celcius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
+}
+
+static void drawSpeedGraph()
+{
+    SetupGraphScreen("Speed (RPM)", SPEED_VAL_LOW, SPEED_VAL_HIGH);
+}
+
+static void drawAccelerationGraph()
+{
+    SetupGraphScreen("Acceleration (m/s^2)", ACCELERATION_VAL_LOW, ACCELERATION_VAL_HIGH);
+}
+
+static void drawMotorTemperatureGraph()
+{
+    SetupGraphScreen("Motor Temperature (Celcius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
+}
+
+static void drawLightGraph()
+{
+    SetupGraphScreen("Light (Lux)", LIGHT_VAL_LOW, LIGHT_VAL_HIGH);
+}
+
+// Setup graphing screen
+char lowLimit[5];
+char highLimit[5];
+static void SetupGraphScreen(char * title, int yMin, int yMax)
+{
+    sprintf(lowLimit, "%d", yMin);
+    sprintf(highLimit, "%d", yMax);
     // Remove and paint
     removeAllWidgets();
     WidgetPaint((tWidget *) &g_sGraphPage);
@@ -351,9 +384,9 @@ static void SetupGraphScreen()
     GrLineDraw(&sContext, 5, 55, 15, 55);
 
     // Plot title, and y-axis limits
-    GrStringDraw(&sContext, "Test", -1, 100, 25, true);
-    GrStringDraw(&sContext, "0", -1, 10, 202, false);
-    GrStringDraw(&sContext, "100", -1, 18, 38, false);
+    GrStringDraw(&sContext, title, -1, 100, 25, true);
+    GrStringDraw(&sContext, lowLimit, -1, 10, 202, false);
+    GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
     drawingGraph = 1;
     while (drawingGraph) {
@@ -364,7 +397,7 @@ static void SetupGraphScreen()
         }
 
         // Draw data on the graph
-        DrawDataOnGraph();
+        DrawDataOnGraph(yMin, yMax);
         WidgetMessageQueueProcess();
     }
 }
@@ -384,7 +417,7 @@ float float_rand( float min, float max )
 // Graphs the chosen data on the map and scales accordingly
 uint16_t graphedPointsCount = 0;
 uint16_t adcGraphSamples[100];
-static void DrawDataOnGraph()
+static void DrawDataOnGraph(int yMin, int yMax)
 {
     uint16_t s_x = 20;
     uint16_t s_y = 55;
@@ -392,12 +425,13 @@ static void DrawDataOnGraph()
     uint16_t height = 140;
 
     // Would usually do this on a per-graph basis
-    uint16_t max_y = 100;
+    uint16_t max_y = yMax;
     uint16_t mid_point = 0;
-    uint16_t max_x = 100;
+    uint16_t max_x = 100; // how many samples
     uint16_t last_sample = rand() % 100;
 
     if(graphedPointsCount == max_x){
+        // Reset graph
         graphedPointsCount = 0;
         WidgetPaint((tWidget *) &g_sGraph);
         WidgetMessageQueueProcess();

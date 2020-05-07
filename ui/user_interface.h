@@ -47,6 +47,12 @@ static void StartStopMotor();
 static void SetupGraphScreen();
 static void DrawDataOnGraph();
 static void returnFromGraph();
+static void drawPowerGraph();
+static void drawAmbientTemperatureGraph();
+static void drawSpeedGraph();
+static void drawAccelerationGraph();
+static void drawMotorTemperatureGraph();
+static void drawLightGraph();
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);
