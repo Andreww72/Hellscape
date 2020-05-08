@@ -291,6 +291,12 @@ GPIO_PinConfig gpioPinConfigs[] = {
     GPIOTiva_PJ_0 | GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING,
     /* EK_TM4C1294XL_USR_SW2 */
     GPIOTiva_PJ_1 | GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING,
+    /* EK_TM4C1294XL_HALL_A */
+    GPIOTiva_PM_3 | GPIO_CFG_INPUT
+    /* EK_TM4C1294XL_HALL_B */
+    GPIOTiva_PH_2 | GPIO_CFG_INPUT
+    /* EK_TM4C1294XL_HALL_C */
+    GPIOTiva_PN_2 | GPIO_CFG_INPUT
 
     /* Output pins */
     /* EK_TM4C1294XL_USR_D1 */
@@ -308,7 +314,10 @@ GPIO_PinConfig gpioPinConfigs[] = {
  */
 GPIO_CallbackFxn gpioCallbackFunctions[] = {
     NULL,  /* EK_TM4C1294XL_USR_SW1 */
-    NULL   /* EK_TM4C1294XL_USR_SW2 */
+    NULL,  /* EK_TM4C1294XL_USR_SW2 */
+    NULL, /* HALL A */
+    NULL, /* HALL B */
+    NULL  /* HALL C */
 };
 
 /* The device-specific GPIO_config structure */

@@ -153,10 +153,10 @@ int main(void)
     if (!initMotor()) {
         System_printf("Motorlib initialisation failed\n");
         System_flush();
-        while (1) {
-
-        }
+        while (1) {} // stop here if it dies
     }
+
+    startMotor();
 
     // Enable interrupts
     IntMasterEnable();

@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include <xdc/runtime/Error.h>
 #include <xdc/runtime/System.h>
+#include <driverlib/gpio.h>
+#include <inc/hw_memmap.h>
+
 #include "drivers/motorlib.h"
 
 /**
@@ -17,6 +20,11 @@
  * Returns 1 for success or 0 for failure
  */
 bool initMotor();
+
+/**
+ * Start the motor
+ */
+int startMotor();
 
 /**
  * Perform an emergency stop
