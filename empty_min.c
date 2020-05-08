@@ -50,7 +50,6 @@
 #define TASKSTACKSIZE   4096
 
 Char taskStack[TASKSTACKSIZE];
-
 tContext sContext;
 
 extern void TouchScreenIntHandler(void);
@@ -91,8 +90,6 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
         UserInterfaceDraw(&sContext);
         DrawDateTime();
     }
-
-
 }
 
 void test_func() {
@@ -131,9 +128,7 @@ bool setupGUI(uint32_t ui32SysClock) {
     clkParamsGUI.period = 5000;
     clkParamsGUI.startFlag = TRUE;
     taskParams.priority = 15;
-    Error_Block eb;
-  ////Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
-  ////                                      5000, &clkParamsGUI, &eb);
+
     return 1;
 }
 
@@ -143,7 +138,7 @@ int main(void)
     Board_initGeneral();
     Board_initGPIO();
 
-    init_sensors();
+    init_sensors(1);
 
     bool motorLibSuccess = initMotor();
     System_printf("%d\n", motorLibSuccess);
@@ -168,7 +163,6 @@ int main(void)
 
     /* Start BIOS */
     BIOS_start();
-
 
     return (0);
 }
