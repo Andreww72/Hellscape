@@ -1,11 +1,7 @@
 /* XDCtools Header files */
 #include <xdc/std.h>
-<<<<<<< HEAD
-//#include <xdc/runtime/System.h>
-=======
 #include <xdc/runtime/System.h>
 #include <xdc/runtime/Error.h>
->>>>>>> develop
 
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
@@ -91,14 +87,6 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
 
-    if (!initMotor()) {
-//        System_printf("Motorlib initialisation failed...");
-//        System_flush();
-        while (1) {
-
-        }
-    }
-
     while(1)
     {
         UserInterfaceDraw(&sContext);
@@ -155,11 +143,20 @@ int main(void)
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+    PWM_init();
 
     /* Set system clock */
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
             SYSCTL_CFG_VCO_480), 120000000);
+
+    if (!initMotor()) {
+        System_printf("Motorlib initialisation failed\n");
+        System_flush();
+        while (1) {
+
+        }
+    }
 
     // Enable interrupts
     IntMasterEnable();

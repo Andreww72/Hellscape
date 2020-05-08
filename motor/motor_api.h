@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <xdc/runtime/Error.h>
+#include <xdc/runtime/System.h>
 #include "drivers/motorlib.h"
 
 /**

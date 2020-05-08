@@ -8,11 +8,16 @@
 #include "motor_api.h"
 
 bool initMotor() {
-    bool return_val = false;
+    int return_val;
     Error_Block *eb;
 
     return_val = initMotorLib(50, eb);
     enableMotor();
+
+    if (return_val == 0) {
+        System_printf("%s\n", eb->msg);
+        System_flush();
+    }
 
     return return_val;
 }
