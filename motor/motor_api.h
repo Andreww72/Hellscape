@@ -10,9 +10,11 @@
 #include <xdc/runtime/Error.h>
 #include <xdc/runtime/System.h>
 #include <driverlib/gpio.h>
+#include <ti/drivers/GPIO.h>
 #include <inc/hw_memmap.h>
 
 #include "drivers/motorlib.h"
+#include "Board.h"
 
 /**
  * Initialise the motor
@@ -24,7 +26,7 @@ bool initMotor();
 /**
  * Start the motor
  */
-int startMotor();
+void startMotor();
 
 /**
  * Perform an emergency stop

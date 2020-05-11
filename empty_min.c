@@ -87,6 +87,8 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
 
+    startMotor();
+
     while(1)
     {
         UserInterfaceDraw(&sContext);
@@ -155,8 +157,6 @@ int main(void)
         System_flush();
         while (1) {} // stop here if it dies
     }
-
-    startMotor();
 
     // Enable interrupts
     IntMasterEnable();

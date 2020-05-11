@@ -7,17 +7,19 @@
 
 #include "motor_api.h"
 
-void hallAFxn() {
+// GPIO Interrupts
+
+void hallAFxn(unsigned int index) {
     System_printf("Hall A Interrupt fired!\n");
     System_flush();
 }
 
-void hallBFxn() {
+void hallBFxn(unsigned int index) {
     System_printf("Hall B Interrupt fired!\n");
     System_flush();
 }
 
-void hallCFxn() {
+void hallCFxn(unsigned int index) {
     System_printf("Hall C Interrupt fired!\n");
     System_flush();
 }
@@ -27,6 +29,7 @@ bool initMotor() {
     Error_Block *eb;
 
     return_val = initMotorLib(50, eb);
+
     enableMotor();
 
     // if you need to configure these pins further, call GPIO_setConfig here
@@ -48,11 +51,16 @@ bool initMotor() {
     return return_val;
 }
 
-int startMotor() {
+void startMotor() {
 //    int return_val;
-
-    updateMotor(0,0,1);
-
+    setDuty(25);
+    while (1) {
+//        System_printf("%d, %d, %d\n", GPIO_read(Board_HALLA), GPIO_read(Board_HALLB), GPIO_read(Board_HALLC));
+//        System_flush();
+//        updateMotor(GPIO_read(Board_HALLA),
+//                    GPIO_read(Board_HALLB),
+//                    GPIO_read(Board_HALLC));
+    }
 }
 
 int setSpeed(int speed_rpm) {
