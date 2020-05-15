@@ -35,6 +35,8 @@ void startMotor();
  */
 int eStop();
 
+void stopMotor_api();
+
 /**
  * Set speed of the motor in rpm
  *

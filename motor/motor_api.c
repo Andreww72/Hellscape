@@ -7,36 +7,25 @@
 
 #include "motor_api.h"
 
+#define PWM 50
+
 // GPIO Interrupts
 
-void hallAFxn(unsigned int index) {
-    System_printf("Hall A Interrupt fired!\n");
-    System_flush();
-}
-
-void hallBFxn(unsigned int index) {
-    System_printf("Hall B Interrupt fired!\n");
-    System_flush();
-}
-
-void hallCFxn(unsigned int index) {
-    System_printf("Hall C Interrupt fired!\n");
-    System_flush();
+void callbackFxn(unsigned int index) {
+    updateMotor(GPIO_read(Board_HALLA),
+                GPIO_read(Board_HALLB),
+                GPIO_read(Board_HALLC));
 }
 
 bool initMotor() {
     int return_val;
     Error_Block *eb;
 
-    return_val = initMotorLib(50, eb);
+    return_val = initMotorLib(PWM, eb);
 
-    enableMotor();
-
-    // if you need to configure these pins further, call GPIO_setConfig here
-
-    GPIO_setCallback(Board_HALLA, hallAFxn);
-    GPIO_setCallback(Board_HALLB, hallBFxn);
-    GPIO_setCallback(Board_HALLC, hallCFxn);
+    GPIO_setCallback(Board_HALLA, callbackFxn);
+    GPIO_setCallback(Board_HALLB, callbackFxn);
+    GPIO_setCallback(Board_HALLC, callbackFxn);
 
     // Enable interrupts for Hall Sensors
     GPIO_enableInt(Board_HALLA);
@@ -51,19 +40,23 @@ bool initMotor() {
     return return_val;
 }
 
-void startMotor() {
+void startMotor(int duty_pct) {
+    float duty_ms = (duty_pct / 100.0) * PWM;
+
 //    int return_val;
-    setDuty(25);
-    while (1) {
-//        System_printf("%d, %d, %d\n", GPIO_read(Board_HALLA), GPIO_read(Board_HALLB), GPIO_read(Board_HALLC));
-//        System_flush();
-//        updateMotor(GPIO_read(Board_HALLA),
-//                    GPIO_read(Board_HALLB),
-//                    GPIO_read(Board_HALLC));
-    }
+    enableMotor();
+    setDuty(duty_ms);
+    updateMotor(GPIO_read(Board_HALLA),
+                GPIO_read(Board_HALLB),
+                GPIO_read(Board_HALLC));
 }
 
-int setSpeed(int speed_rpm) {
+void stopMotor_api() {
+    stopMotor(true);
+    disableMotor();
+}
+
+int setSpeed(int duty_pct) {
     //pass
 
     // get current speed, find error with new speed

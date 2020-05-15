@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <xdc/runtime/System.h>
+#include "motor/motor_api.h"
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
@@ -320,9 +321,11 @@ static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
         motorState = 1;
+        startMotor(70);
     } else {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Start Motor");
         motorState = 0;
+        stopMotor_api();
     }
     WidgetPaint((tWidget *) &g_sMotorOption);
 }

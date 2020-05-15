@@ -87,8 +87,6 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
 
-    startMotor();
-
     while(1)
     {
         UserInterfaceDraw(&sContext);
