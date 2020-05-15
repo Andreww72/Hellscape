@@ -13,6 +13,7 @@
 #include <ti/drivers/GPIO.h>
 #include <inc/hw_memmap.h>
 
+#include "sensors/sensor_api.h"
 #include "drivers/motorlib.h"
 #include "Board.h"
 

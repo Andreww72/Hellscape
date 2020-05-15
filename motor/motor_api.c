@@ -17,6 +17,13 @@ void callbackFxn(unsigned int index) {
                 GPIO_read(Board_HALLC));
 }
 
+void rotationCallbackFxn(unsigned int index) {
+    inc_rotations();
+    updateMotor(GPIO_read(Board_HALLA),
+                GPIO_read(Board_HALLB),
+                GPIO_read(Board_HALLC));
+}
+
 bool initMotor() {
     int return_val;
     Error_Block *eb;
