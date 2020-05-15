@@ -50,6 +50,7 @@
 #define TASKSTACKSIZE   4096
 
 Char taskStack[TASKSTACKSIZE];
+Char taskStack2[TASKSTACKSIZE];
 tContext sContext;
 
 extern void TouchScreenIntHandler(void);
@@ -85,6 +86,7 @@ void DrawDateTime()
 void userInterfaceFxn(UArg arg0, UArg arg1)
 {
     UserInterfaceInit(arg0, &sContext);
+
     while(1)
     {
         UserInterfaceDraw(&sContext);
@@ -138,16 +140,18 @@ int main(void)
     Board_initGeneral();
     Board_initGPIO();
 
-    init_sensors(1);
-
-    bool motorLibSuccess = initMotor();
-    System_printf("%d\n", motorLibSuccess);
-    System_flush();
+    PWM_init();
 
     /* Set system clock */
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
             SYSCTL_CFG_VCO_480), 120000000);
+
+    if (!initMotor()) {
+        System_printf("Motorlib initialisation failed\n");
+        System_flush();
+        while (1) {} // stop here if it dies
+    }
 
     // Enable interrupts
     IntMasterEnable();
