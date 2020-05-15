@@ -24,43 +24,45 @@ bool init_sensors(uint8_t accel_threshold){
 //   Implementations sensor setups   //
 ///////////**************??????????????
 
-bool init_lightSensor(){
-    // TODO: Initialise light sensor
+// Initialise light sensor via I2C
+// Sample window size greater than 5 at >= 2Hz. Create a recurring SWI
+bool init_lightSensor() {
     return true;
 }
 
-bool init_boardTempSensor(){
-    // TODO: Initialise board temperature sensors
+// Initialise board temperature sensors via UART
+// Sample window size greater than 3 at >= 2Hz. Create a recurring SWI
+bool init_boardTempSensor() {
     return true;
 }
 
+// Initialise motor temperature sensors via UART
+// Sample window size greater than 3 at >= 2Hz. Create a recurring SWI
 bool init_motorTempSensor() {
-    // TODO: initialise motor temperature sensors
-
     return true;
 }
 
+// Initialise two of three motor phase current sensors via analogue signals
+// Sample window size greater than 5 at >= 250Hz. Create a recurring SWI
 bool init_currentSensors() {
-    // TODO: initialise motor temperature sensors
-
+    // E3 D3 A6
     return true;
 }
 
-bool init_axisAcceleration() {
-    // TODO: initialise motor temperature sensors
-
+// Initialise sensors for acceleration on all three axes
+// Sample window size (of each axis) greater than 5 at 200Hz. Create a recurring SWI
+bool init_acceleration() {
     return true;
 }
 
+// Initialise motor accelerometer, to detect a 'crash' threshold via the chips output interrupt pin
 bool init_accelerometer(uint8_t threshold) {
-    // TODO: initialise motor temperature sensors
-
     return true;
 }
 
+// Initialise speed sensor to measure motor
+// Sample window size greater than 5 at >= 100Hz. Create a recurring SWI
 bool init_speedo() {
-    // TODO: initialise motor temperature sensors
-
     return true;
 }
 
@@ -69,55 +71,45 @@ bool init_speedo() {
 ///////////**************??????????????
 
 // Read and filter light over I2C
+// Sample window size greater than 5 at >= 2Hz
 uint8_t get_light() {
-    // TODO: It
 
     return 1;
 }
 
-// Read and filter board and motor temperature sensors over UART
+// Read and filter board temperature sensors over UART
+// Sample window size greater than 3 at >= 2Hz
 uint8_t get_board_temp() {
-    // TODO: It
 
     return 1;
 }
 
+// Read and filter motor temperature sensors over UART
+// Sample window size greater than 3 at >= 2Hz
 uint8_t get_motorTemp() {
-    // TODO: It
-
     return 1;
 }
 
-// Read and filter two motor phase currents via analog signals on the current sensors
+// Read and filter two motor phase currents via analogue signals on the current sensors
+// Sample window size greater than 5 at >= 250Hz
+uint8_t val = 1;
 uint8_t* get_currentSensors() {
-    // TODO: It
+    return &val;
+}
 
+// Read and filter acceleration on all three axes, and calculate absolute acceleration.
+// Sample window size (of each axis) greater than 5 at 200Hz
+uint8_t get_acceleration() {
     return 1;
 }
 
-// Read and filter acceleration on all three axes
-// Calculate avg abs acceleration
-uint8_t get_accelerations() {
-    // TODO: It
-
-    return 1;
-}
-
-uint8_t get_absAcceleration() {
-    // TODO: It
-
-    return 1;
-}
-
-// Interrupt to detect user defined crash threshold (m/s^2)
+// Accelerometer interrupt to detect user defined crash threshold (m/s^2)
 void accelerometer_callback() {
-    // TODO: It
-
+    // Pass
 }
 
 // Measure and filter current motor speed (rpm)
+// Sample window size greater than 5 at >= 100Hz
 uint8_t get_speedo() {
-    // TODO: It
-
     return 1;
 }

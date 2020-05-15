@@ -31,7 +31,7 @@ bool init_currentSensors();
 // Initialises the sensors to find acceleration on the three axis
 bool init_axisAcceleration();
 
-// Intialises the accelerometer
+// Initialises the accelerometer
 bool init_accelerometer(uint8_t threshold);
 
 bool init_speedo();
@@ -43,13 +43,12 @@ uint8_t get_light();
 uint8_t get_board_temp();
 uint8_t get_motorTemp();
 
-// Read and filter two motor phase currents via analog signals on the current sensors
+// Read and filter two motor phase currents via analogue signals on the current sensors
 uint8_t* get_currentSensors();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
-uint8_t get_accelerations();
-uint8_t get_absAcceleration();
+uint8_t get_acceleration();
 
 // Interrupt to detect user defined crash threshold (m/s^2)
 void accelerometer_callback();
