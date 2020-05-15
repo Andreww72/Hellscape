@@ -72,27 +72,27 @@ bool init_speedo() {
 uint8_t get_light() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 // Read and filter board and motor temperature sensors over UART
 uint8_t get_board_temp() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 uint8_t get_motorTemp() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 // Read and filter two motor phase currents via analog signals on the current sensors
 uint8_t* get_currentSensors() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 // Read and filter acceleration on all three axes
@@ -100,25 +100,24 @@ uint8_t* get_currentSensors() {
 uint8_t get_accelerations() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 uint8_t get_absAcceleration() {
     // TODO: It
 
-    return 1
+    return 1;
 }
 
 // Interrupt to detect user defined crash threshold (m/s^2)
 void accelerometer_callback() {
     // TODO: It
 
-    return 1
 }
 
 // Measure and filter current motor speed (rpm)
 uint8_t get_speedo() {
     // TODO: It
 
-    return 1
+    return 1;
 }
