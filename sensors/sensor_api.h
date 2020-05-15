@@ -50,5 +50,6 @@ uint8_t get_acceleration();
 
 // Measure and filter current motor speed (rpm)
 uint8_t get_speedo();
+void inc_rotations();
 
 #endif /* SENSORS_SENSOR_API_H_ */

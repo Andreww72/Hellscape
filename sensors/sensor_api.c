@@ -18,6 +18,7 @@ uint8_t motorTemp = 0;
 uint8_t currentSensors[] = {0, 0, 0};
 uint8_t acceleration = 0;
 uint8_t speedo = 0;
+int rotations = 0;
 
 
 ///////////**************??????????????
@@ -209,4 +210,8 @@ uint8_t get_acceleration() {
 
 uint8_t get_speedo() {
     return speedo;
+}
+
+void inc_rotations() {
+    rotations++;
 }
