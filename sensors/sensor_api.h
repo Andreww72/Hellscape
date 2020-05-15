@@ -29,10 +29,8 @@ bool init_motorTempSensor();
 bool init_currentSensors();
 
 // Initialises the sensors to find acceleration on the three axis
-bool init_axisAcceleration();
-
-// Initialises the accelerometer
-bool init_accelerometer(uint8_t threshold);
+// Also setup accelerometer threshold callback.
+bool init_acceleration(uint8_t threshold);
 
 bool init_speedo();
 
@@ -50,11 +48,7 @@ uint8_t* get_currentSensors();
 // Calculate avg abs acceleration
 uint8_t get_acceleration();
 
-// Interrupt to detect user defined crash threshold (m/s^2)
-void accelerometer_callback();
-
 // Measure and filter current motor speed (rpm)
 uint8_t get_speedo();
-
 
 #endif /* SENSORS_SENSOR_API_H_ */

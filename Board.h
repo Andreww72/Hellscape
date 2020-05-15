@@ -62,6 +62,9 @@ extern "C" {
 #define Board_HALLA                 EK_TM4C1294XL_HALL_A
 #define Board_HALLB                 EK_TM4C1294XL_HALL_B
 #define Board_HALLC                 EK_TM4C1294XL_HALL_C
+#define Board_CURRA                 EK_TM4C1294XL_CURR_A
+#define Board_CURRB                 EK_TM4C1294XL_CURR_B
+#define Board_CURRC                 EK_TM4C1294XL_CURR_C
 
 #define Board_I2C0                  EK_TM4C1294XL_I2C7
 #define Board_I2C1                  EK_TM4C1294XL_I2C8
