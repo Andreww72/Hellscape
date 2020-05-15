@@ -66,11 +66,16 @@ bool init_boardTempSensor() {
 
 // Initialise motor temperature sensors via UART
 bool init_motorTempSensor() {
+    // GPIO setup statically (done)
+    // RX(7): PC4
+    // TX(7): PC5
+
     // Create a recurring 2Hz SWI swi_motor_temp
+
     // Setup UART connection
 
-    // PC_4 on A3
-    // PC_5 on A4
+    // Setup TMP107 sensor
+
 
     uint8_t success = 1;
     if (success) {
@@ -83,10 +88,9 @@ bool init_motorTempSensor() {
 // Initialise two of three motor phase current sensors via analogue signal (use ADC)
 // Sample window size greater than 5 at >= 250Hz. Create a recurring SWI
 bool init_currentSensors() {
+    // Current B (D7) and current C (E3) GPIO setup statically
+    // Setup ADC channels 4 (B) and 3 (C)
     // Create a recurring 250Hz SWI swi_currentSensors
-    // Setup analogue signal pins
-    // Port E3 D7 A6 use ADCs 12, 4, 3
-    // Do current C (E3) and current B (D7) as they are on analogue. A is UART.
 
     uint8_t success = 1;
     if (success) {
@@ -155,9 +159,7 @@ void swi_motorTemp() {
 // Read and filter two motor phase currents via analogue signals on the current sensors
 // Sample window size greater than 5 at >= 250Hz
 void swi_currentSensors() {
-    // Port E3 D7 A6
-    // ADC 12, 4, 3
-    // Do current C (E3) and current B (D7) as they are on analogue. A is UART
+
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.

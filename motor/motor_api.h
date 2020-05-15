@@ -26,7 +26,7 @@ bool initMotor();
 /**
  * Start the motor
  */
-void startMotor();
+void startMotor(int duty_pct);
 
 /**
  * Perform an emergency stop
