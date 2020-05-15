@@ -62,7 +62,8 @@ extern "C" {
 #define Board_HALLA                 EK_TM4C1294XL_HALL_A
 #define Board_HALLB                 EK_TM4C1294XL_HALL_B
 #define Board_HALLC                 EK_TM4C1294XL_HALL_C
-#define Board_CURRA                 EK_TM4C1294XL_CURR_A
+#define Board_MOTORTEMPRX           EK_TM4C1294XL_MOTOR_TEMP_RX
+#define Board_MOTORTEMPTX           EK_TM4C1294XL_MOTOR_TEMP_TX
 #define Board_CURRB                 EK_TM4C1294XL_CURR_B
 #define Board_CURRC                 EK_TM4C1294XL_CURR_C
 

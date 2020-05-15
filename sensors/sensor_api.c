@@ -148,8 +148,8 @@ void swi_board_temp() {
 void swi_motorTemp() {
     // Sensor next to the motor
     // TMP107 sensor
-    // PC_4 on A3
-    // PC_5 on A4
+    // RX(7): PC4
+    // TX(7): PC5
 }
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
