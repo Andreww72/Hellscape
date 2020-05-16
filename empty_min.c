@@ -51,6 +51,11 @@ Char taskStack[TASKSTACKSIZE];
 
 tContext sContext;
 
+Clock_Struct clk0Struct;
+Clock_Handle clkHandle;
+
+bool shouldDrawDateTime = true;
+
 extern void TouchScreenIntHandler(void);
 
 
@@ -70,15 +75,21 @@ static char * getCurrentDateTime()
     return t;
 }
 
-// Draws the date, time and lux sensor results to the title bar
+Void ShouldDrawDateTime(UArg arg0) {
+    shouldDrawDateTime = true;
+}
+
+// Draws the date, time
 void DrawDateTime()
 {
-    GrContextBackgroundSet(&sContext, 0x00595D69);
-    GrContextForegroundSet(&sContext, ClrWhite);
-    GrContextFontSet(&sContext, g_psFontCmss18b);
-    GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
-    GrFlush(&sContext);
-
+    if (shouldDrawDateTime) {
+        GrContextBackgroundSet(&sContext, 0x00595D69);
+        GrContextForegroundSet(&sContext, ClrWhite);
+        GrContextFontSet(&sContext, g_psFontCmss18b);
+        GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
+        GrFlush(&sContext);
+        shouldDrawDateTime = false;
+    }
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1)
@@ -89,13 +100,6 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
         UserInterfaceDraw(&sContext);
         DrawDateTime();
     }
-
-
-}
-
-void test_func() {
-    System_printf("Here");
-    System_flush();
 }
 
 bool setupGUI(uint32_t ui32SysClock) {
@@ -124,14 +128,24 @@ bool setupGUI(uint32_t ui32SysClock) {
         return 0;
     }
 
-    Clock_Params clkParamsGUI;
-    Clock_Params_init(&clkParamsGUI);
-    clkParamsGUI.period = 5000;
-    clkParamsGUI.startFlag = TRUE;
-    taskParams.priority = 15;
-    Error_Block eb;
-  ////Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
-  ////                                      5000, &clkParamsGUI, &eb);
+    Clock_Params clkParams;
+    Clock_Params_init(&clkParams);
+    clkParams.period = 1000;
+    clkParams.startFlag = TRUE;
+    Clock_construct(&clk0Struct, (Clock_FuncPtr)ShouldDrawDateTime,
+                        1000, &clkParams);
+    clkHandle = Clock_handle(&clk0Struct);
+    Clock_start(clkHandle);
+
+    //Clock_Params clkParamsGUI;
+    //Clock_Params_init(&clkParamsGUI);
+    //clkParamsGUI.period = 1000;
+    //clkParamsGUI.startFlag = FALSE;
+    //Error_Block eb;
+    //Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
+    //                                      1000, &clkParamsGUI, &eb);
+    //Clock_construct(&clk0Struct, (Clock_FuncPtr)clk0Fxn,
+    //                    5, &clkParams);
     return 1;
 }
 
