@@ -30,8 +30,16 @@
 #define LIGHT_VAL_LOW 0
 #define LIGHT_VAL_HIGH 100
 
+// Graph bounds
+#define X_GRAPH 20
+#define Y_GRAPH 55
+#define WIDTH_GRAPH 280
+#define HEIGHT_GRAPH 140
+#define MAX_PLOT_SAMPLES 20
+
 // Get sContext for empty_min.c externally
 extern tContext sContext;
+extern bool shouldDrawDataOnGraph;
 
 // Keep track of which settings page we're on
 int settingsPageIdentifier = temperature;
@@ -65,11 +73,6 @@ RectangularButton(g_sMotorOption, &g_sMenuTypePage, 0, 0,
 Canvas(g_sMenuSetPage, &g_sMenuTypePage, 0, 0,
        &g_sKentec320x240x16_SSD2119, 0, 0, 320, (240  -0),
        CANVAS_STYLE_FILL, 0x00595D69, 0, 0, 0, 0, 0, 0);
-
-void something_test() {
-    System_printf("Test");
-    System_flush();
-}
 
 RectangularButton(g_sSetTemp, &g_sMenuSetPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 10, 25, 144, 80,
@@ -192,12 +195,12 @@ RectangularButton(g_sSetSave, &g_sSettingPage, 0, 0,
 
 // The actual graphing page
 Canvas(g_sGraphPage, &g_sMenuGraphPage, 0, 0,
-       &g_sKentec320x240x16_SSD2119, 0, 0, 320, (240 - 0 -0),
+       &g_sKentec320x240x16_SSD2119, 0, 0, 320, 240,
        CANVAS_STYLE_FILL, 0x00595D69, 0, 0, 0, 0, 0, 0);
 // The graph itself
 Canvas(g_sGraph, &g_sGraphPage, 0, 0,
-       &g_sKentec320x240x16_SSD2119, 20, 55, 280, 140,
-       CANVAS_STYLE_FILL, 0x002546A1, 0, 0, 0, 0, 0, 0);
+       &g_sKentec320x240x16_SSD2119, X_GRAPH, Y_GRAPH, WIDTH_GRAPH, HEIGHT_GRAPH,
+       CANVAS_STYLE_FILL, 0x00595D69, 0, 0, 0, 0, 0, 0);
 
 RectangularButton(g_sGraphActBack, &g_sGraphPage, 0, 0,
                   &g_sKentec320x240x16_SSD2119, 10, 219, 300, 20,
@@ -329,38 +332,38 @@ static void StartStopMotor() {
 
 static void drawPowerGraph()
 {
-    SetupGraphScreen("Power Graph (Watts)", POWER_VAL_LOW, POWER_VAL_HIGH);
+    setupGraphScreen("Power Graph (Watts)", POWER_VAL_LOW, POWER_VAL_HIGH);
 }
 
 static void drawAmbientTemperatureGraph()
 {
-    SetupGraphScreen("Ambient Temperature (Celcius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
+    setupGraphScreen("Ambient Temp (Celcius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
 }
 
 static void drawSpeedGraph()
 {
-    SetupGraphScreen("Speed (RPM)", SPEED_VAL_LOW, SPEED_VAL_HIGH);
+    setupGraphScreen("Speed (RPM)", SPEED_VAL_LOW, SPEED_VAL_HIGH);
 }
 
 static void drawAccelerationGraph()
 {
-    SetupGraphScreen("Acceleration (m/s^2)", ACCELERATION_VAL_LOW, ACCELERATION_VAL_HIGH);
+    setupGraphScreen("Acceleration (m/s^2)", ACCELERATION_VAL_LOW, ACCELERATION_VAL_HIGH);
 }
 
 static void drawMotorTemperatureGraph()
 {
-    SetupGraphScreen("Motor Temperature (Celcius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
+    setupGraphScreen("Motor Temp (Celcius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
 }
 
 static void drawLightGraph()
 {
-    SetupGraphScreen("Light (Lux)", LIGHT_VAL_LOW, LIGHT_VAL_HIGH);
+    setupGraphScreen("Light (Lux)", LIGHT_VAL_LOW, LIGHT_VAL_HIGH);
 }
 
 // Setup graphing screen
 char lowLimit[5];
 char highLimit[5];
-static void SetupGraphScreen(char * title, int yMin, int yMax)
+static void setupGraphScreen(char * title, int yMin, int yMax)
 {
     sprintf(lowLimit, "%d", yMin);
     sprintf(highLimit, "%d", yMax);
@@ -373,39 +376,44 @@ static void SetupGraphScreen(char * title, int yMin, int yMax)
     // Draw the graph
     GrStringDraw(&sContext, "Time", -1, 130, 202, false);
     GrLineDrawV(&sContext, 10, 45, 200);
-    GrLineDrawH(&sContext, 10, 305,200);
+    GrLineDrawH(&sContext, 10, 305, 200);
     GrLineDraw(&sContext, 10, 45, 8,50);
     GrLineDraw(&sContext, 10, 45, 12, 50);
     GrLineDraw(&sContext, 305, 200, 303, 198);
     GrLineDraw(&sContext, 305, 200, 303, 202);
 
-    // Tick marks
-    GrLineDraw(&sContext, 300, 195, 300, 205);
-    GrLineDraw(&sContext, 5, 55, 15, 55);
-
     // Plot title, and y-axis limits
-    GrStringDraw(&sContext, title, -1, 100, 25, true);
+    GrStringDraw(&sContext, title, -1, 5, 15, true);
     GrStringDraw(&sContext, lowLimit, -1, 10, 202, false);
     GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
     drawingGraph = 1;
     while (drawingGraph) {
         // Simulate a delay
-        int busy;
-        for (busy = 0; busy < 500000; busy++) {
-            busy*busy*busy*busy;
-        }
+        //int busy;
+        //for (busy = 0; busy < 500000; busy++) {
+        //    busy*busy*busy*busy;
+        //}
 
         // Draw data on the graph
-        DrawDataOnGraph(yMin, yMax);
+        if (shouldDrawDataOnGraph) {
+            DrawDataOnGraph(yMin, yMax, rand() % 100);
+            shouldDrawDataOnGraph = false;
+        }
         WidgetMessageQueueProcess();
     }
 }
 
+// Graphs the chosen data on the map and scales accordingly
+uint16_t pointsCount = 0;
+uint16_t previousSample = 0;
 static void returnFromGraph()
 {
     DrawGraphMenuScreen();
     drawingGraph = 0;
+
+    pointsCount = 0;
+    previousSample = 0;
 }
 
 float float_rand( float min, float max )
@@ -414,54 +422,45 @@ float float_rand( float min, float max )
     return min + scale * ( max - min );      /* [min, max] */
 }
 
-// Graphs the chosen data on the map and scales accordingly
-uint16_t graphedPointsCount = 0;
-uint16_t adcGraphSamples[100];
-static void DrawDataOnGraph(int yMin, int yMax)
+static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
 {
-    uint16_t s_x = 20;
-    uint16_t s_y = 55;
-    uint16_t width = 279;
-    uint16_t height = 140;
-
-    // Would usually do this on a per-graph basis
-    uint16_t max_y = yMax;
-    uint16_t mid_point = 0;
-    uint16_t max_x = 100; // how many samples
-    uint16_t last_sample = rand() % 100;
-
-    if(graphedPointsCount == max_x){
+    if (pointsCount == MAX_PLOT_SAMPLES){
         // Reset graph
-        graphedPointsCount = 0;
+        pointsCount = 0;
         WidgetPaint((tWidget *) &g_sGraph);
         WidgetMessageQueueProcess();
+        return;
     }
 
     // Calculate y and x scale
-    float yscale = (float)height/(float)max_y;
-    float xscale = (float)width/(float)max_x;
+    float yscale = (float)height/(float)(yMax - yMin);
+    float xscale = (float)width/(float)MAX_PLOT_SAMPLES;
 
+    // Declare line coordinates
     uint16_t x1, x2, y1, y2;
-    adcGraphSamples[graphedPointsCount] = last_sample;
 
     // Draw onto graph
-    if(graphedPointsCount != 0){
-        x1 = (graphedPointsCount*xscale)+s_x;
-        y1 = ((s_y + height)-(adcGraphSamples[graphedPointsCount - 1] - mid_point) * yscale);
-        x2 = ((graphedPointsCount+1)*xscale)+s_x;
-        y2 = ((s_y + height)-(adcGraphSamples[graphedPointsCount]-mid_point)*yscale);
-        if (y1 < s_y) y1 = s_y + 1;
-        if (y1 > s_y + height) y1 = s_y + height - 1;
-        if (y2 < s_y) y2 = s_y + 1;
-        if (y2 > s_y + height) y2 = s_y + height - 1;
-        GrLineDraw(&sContext,x1,y1,x2,y2);
-        GrFlush(&sContext);
-    }
-    graphedPointsCount +=1;
+    x1 = (pointsCount * xscale) + s_x;
+    y1 = ((s_y + height) - (previousSample - yMin) * yscale);
+    x2 = ((pointsCount + 1) * xscale)+s_x;
+    y2 = ((s_y + height) - (lastSample - yMin) * yscale);
+    if (y1 < s_y) y1 = s_y + 1;
+    if (y1 > s_y + height) y1 = s_y + height - 1;
+    if (y2 < s_y) y2 = s_y + 1;
+    if (y2 > s_y + height) y2 = s_y + height - 1;
+    GrLineDraw(&sContext, x1, y1, x2, y2);
+    GrFlush(&sContext);
+
+    // Increase the number of points plotted count
+    pointsCount +=1;
+
+    // Change the previous sample
+    previousSample = lastSample;
 
 }
 
 void initSettingValues() {
+    // Settings
     motorTemperatureLimit = 50;
     motorSpeedLimit = 50;
     motorCurrentLimit = 50;
@@ -469,6 +468,12 @@ void initSettingValues() {
 
     // Initially not drawing a graph
     drawingGraph = 0;
+
+    // Graph positioning
+    s_x = X_GRAPH;
+    s_y = Y_GRAPH + 1;
+    width = WIDTH_GRAPH - 1;
+    height = HEIGHT_GRAPH - 2;
 }
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext)

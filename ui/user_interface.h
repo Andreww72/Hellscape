@@ -27,6 +27,11 @@ enum page {
     acceleration = 3,
 };
 
+uint16_t s_x;
+uint16_t s_y;
+uint16_t width;
+uint16_t height;
+
 static char * getCurrentDateTime();
 void DrawDateTime();
 static void DrawHomeScreen();
@@ -44,8 +49,8 @@ static void decreaseSetting();
 
 static void StartStopMotor();
 
-static void SetupGraphScreen();
-static void DrawDataOnGraph();
+static void setupGraphScreen();
+static void DrawDataOnGraph(int yMin, int yMax, uint16_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();
 static void drawAmbientTemperatureGraph();
