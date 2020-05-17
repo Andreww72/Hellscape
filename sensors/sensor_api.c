@@ -5,18 +5,7 @@
  *      Author: Tristan
  */
 
-#include <xdc/std.h>
-#include <xdc/runtime/System.h>
-#include <ti/sysbios/knl/Clock.h>
-
 #include "sensor_api.h"
-#include "motor/motor_api.h"
-#include "driverlib/adc.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/gpio.h"
-#include "inc/hw_memmap.h"
-#include <ti/sysbios/knl/Clock.h>
-#include <ti/drivers/UART.h>
 
 #define windowLight 5
 #define windowTemp 3

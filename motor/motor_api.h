@@ -11,10 +11,6 @@
 #include <xdc/runtime/System.h>
 #include <driverlib/gpio.h>
 #include <ti/drivers/GPIO.h>
-//#include <ti/sysbios/family/arm/m3/Hwi.h>
-#include <ti/sysbios/gates/GateHwi.h>
-
-#include "sensors/sensor_api.h"
 #include "drivers/motorlib.h"
 #include "Board.h"
 
