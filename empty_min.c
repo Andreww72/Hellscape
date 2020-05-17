@@ -90,7 +90,7 @@ void userInterfaceFxn(UArg arg0, UArg arg1)
     while(1)
     {
         UserInterfaceDraw(&sContext);
-        DrawDateTime();
+        //DrawDateTime();
     }
 }
 
@@ -152,6 +152,8 @@ int main(void)
         System_flush();
         while (1) {} // stop here if it dies
     }
+
+    //startMotor(50);
 
     // Enable interrupts
     IntMasterEnable();

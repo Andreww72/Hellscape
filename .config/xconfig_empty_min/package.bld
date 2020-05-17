@@ -11,7 +11,7 @@ var makeAssembly = false;
 var Executable = xdc.module('xdc.bld.Executable');
 
 var exeOpts = new Executable.Attrs({
-        cfgScript: 'C:/Users/jshea/workspace_v9/Assignment/empty_min.cfg',
+        cfgScript: 'C:/Users/jshea/Documents/EGH456/empty_min.cfg',
         profile: 'release',
         cfgHome: 'xconfig_empty_min',
 });
@@ -40,8 +40,8 @@ else {
 }
 
 var thisObj = {
-    cfg:        'C:/Users/jshea/workspace_v9/Assignment/empty_min.cfg',
-    outputPath: 'C:/Users/jshea/workspace_v9/Assignment/.config/xconfig_empty_min',
+    cfg:        'C:/Users/jshea/Documents/EGH456/empty_min.cfg',
+    outputPath: 'C:/Users/jshea/Documents/EGH456/.config/xconfig_empty_min',
     exeName:    'empty_min' + suffix,
     exeIntName: 'empty_min' + suffix.replace('.', '_'),
     targ:       targ,

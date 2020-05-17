@@ -321,7 +321,7 @@ static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
         motorState = 1;
-        startMotor(70);
+        startMotor(50);
     } else {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Start Motor");
         motorState = 0;
