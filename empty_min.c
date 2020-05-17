@@ -57,14 +57,13 @@ extern void TouchScreenIntHandler(void);
 
 
 // Gets the current date and time
-static char * getCurrentDateTime()
-{
+static char * getCurrentDateTime() {
     static char t[30];
     struct tm * timeinfo;
     time_t t1 = time (NULL);
     timeinfo = localtime ( &t1 );
     timeinfo->tm_hour += 16;
-    if (timeinfo->tm_hour>24){
+    if (timeinfo->tm_hour>24) {
         timeinfo->tm_hour -= 24;
         timeinfo->tm_mday +=1;
     }
@@ -73,8 +72,7 @@ static char * getCurrentDateTime()
 }
 
 // Draws the date, time and lux sensor results to the title bar
-void DrawDateTime()
-{
+void DrawDateTime() {
     GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);
@@ -83,20 +81,13 @@ void DrawDateTime()
 
 }
 
-void userInterfaceFxn(UArg arg0, UArg arg1)
-{
+void userInterfaceFxn(UArg arg0, UArg arg1) {
     UserInterfaceInit(arg0, &sContext);
 
-    while(1)
-    {
+    while(1) {
         UserInterfaceDraw(&sContext);
         DrawDateTime();
     }
-}
-
-void test_func() {
-    System_printf("Here");
-    System_flush();
 }
 
 bool setupGUI(uint32_t ui32SysClock) {
@@ -129,13 +120,12 @@ bool setupGUI(uint32_t ui32SysClock) {
     Clock_Params_init(&clkParamsGUI);
     clkParamsGUI.period = 5000;
     clkParamsGUI.startFlag = TRUE;
-    taskParams.priority = 15;
+    taskParams.priority = 15; // Why is this here?
 
     return 1;
 }
 
-int main(void)
-{
+int main(void) {
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
@@ -149,6 +139,11 @@ int main(void)
 
     if (!initMotor()) {
         System_printf("Motorlib initialisation failed\n");
+        System_flush();
+        while (1) {} // stop here if it dies
+    }
+    if (!init_sensors(1)) {
+        System_printf("Sensor initialisation failed\n");
         System_flush();
         while (1) {} // stop here if it dies
     }

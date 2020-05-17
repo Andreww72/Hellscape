@@ -32,8 +32,6 @@ bool init_currentSensors();
 // Also setup accelerometer threshold callback.
 bool init_acceleration(uint8_t threshold);
 
-bool init_speedo();
-
 // Read and filter light over I2C
 uint8_t get_light();
 
@@ -42,14 +40,11 @@ uint8_t get_board_temp();
 uint8_t get_motorTemp();
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
-uint8_t* get_currentSensors();
+uint8_t get_currentSensorB();
+uint8_t get_currentSensorC();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
 uint8_t get_acceleration();
-
-// Measure and filter current motor speed (rpm)
-uint8_t get_speedo();
-void inc_rotations();
 
 #endif /* SENSORS_SENSOR_API_H_ */
