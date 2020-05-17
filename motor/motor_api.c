@@ -11,9 +11,6 @@
 #define MAX_DUTY_MS (PWM / 2.0)
 #define SYSTICK_PERIOD_MIN (10.0 / 60000.0)
 
-GateHwi_Handle gateHwi;
-GateHwi_Params gHwiprms;
-
 float rotations = 0;
 float speed_rpm = 0;
 float cum_speed_error = 0;
@@ -39,12 +36,6 @@ bool initMotor() {
     Error_Block *eb;
 
     return_val = initMotorLib(PWM, eb);
-
-    GateHwi_Params_init(&gHwiprms);
-    gateHwi = GateHwi_create(&gHwiprms,NULL);
-    if (gateHwi == NULL) {
-        System_abort("Gate Hwi create has failed");
-    }
 
     GPIO_setConfig(Board_HALLA, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
     GPIO_setConfig(Board_HALLB, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
