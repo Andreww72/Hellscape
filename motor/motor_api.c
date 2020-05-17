@@ -8,26 +8,19 @@
 #include "motor_api.h"
 
 #define PWM 50.0
+#define MAX_DUTY_MS (PWM / 2.0)
 #define SYSTICK_PERIOD_MIN (10.0 / 60000.0)
+
+GateHwi_Handle gateHwi;
+GateHwi_Params gHwiprms;
 
 float rotations = 0;
 float speed_rpm = 0;
-
-// GPIO Interrupts
-
-void updateSpeed() {
-    speed_rpm = rotations / SYSTICK_PERIOD_MIN;
-    rotations = 0;
-}
+float cum_speed_error = 0;
 
 void checkSpeed() {
-    updateSpeed();
-}
-
-void inc_rotations() {
-    rotations += 1.0 / 6.0;
-//    System_printf("%f\n", speed_rpm);
-//    System_flush();
+    speed_rpm = rotations / SYSTICK_PERIOD_MIN;
+    rotations = 0;
 }
 
 void motorUpdateFunc() {
@@ -36,12 +29,8 @@ void motorUpdateFunc() {
                 GPIO_read(Board_HALLC));
 }
 
-void callbackFxn(unsigned int index) {
-    motorUpdateFunc();
-}
-
 void rotationCallbackFxn(unsigned int index) {
-    inc_rotations();
+    rotations += 1.0 / 6.0;
     motorUpdateFunc();
 }
 
@@ -50,6 +39,12 @@ bool initMotor() {
     Error_Block *eb;
 
     return_val = initMotorLib(PWM, eb);
+
+    GateHwi_Params_init(&gHwiprms);
+    gateHwi = GateHwi_create(&gHwiprms,NULL);
+    if (gateHwi == NULL) {
+        System_abort("Gate Hwi create has failed");
+    }
 
     GPIO_setConfig(Board_HALLA, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
     GPIO_setConfig(Board_HALLB, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
@@ -74,13 +69,15 @@ bool initMotor() {
     return return_val;
 }
 
-void startMotor(int duty_pct) {
+void startMotor(int rpm) {
 //  int return_val;
     enableMotor();
-    setSpeed(duty_pct);
-    updateMotor(GPIO_read(Board_HALLA),
-                GPIO_read(Board_HALLB),
-                GPIO_read(Board_HALLC));
+    setSpeed(10);
+    motorUpdateFunc();
+}
+
+void eStopMotor() {
+    //pass
 }
 
 void stopMotor_api() {
@@ -88,8 +85,9 @@ void stopMotor_api() {
     disableMotor();
 }
 
-int setSpeed(int duty_pct) {
-    float duty_ms = duty_pct * 100.0 / PWM;
+int setSpeed(int rpm) {
+//    float duty_ms = duty_pct * 100.0 / PWM;
+    float duty_ms = 25;
     setDuty(duty_ms);
     return 0;
 }
