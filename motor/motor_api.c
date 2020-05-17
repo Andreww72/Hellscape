@@ -19,8 +19,13 @@ float speed_rpm = 0;
 float cum_speed_error = 0;
 
 void checkSpeed() {
+    UInt key;
+
+    key = GateHwi_enter(gateHwi);
     speed_rpm = rotations / SYSTICK_PERIOD_MIN;
+    float speed = speed_rpm;
     rotations = 0;
+    GateHwi_leave(gateHwi, key);
 }
 
 void motorUpdateFunc() {
@@ -30,7 +35,10 @@ void motorUpdateFunc() {
 }
 
 void rotationCallbackFxn(unsigned int index) {
+    UInt key;
+    key = GateHwi_enter(gateHwi);
     rotations += 1.0 / 6.0;
+    GateHwi_leave(gateHwi, key);
     motorUpdateFunc();
 }
 
