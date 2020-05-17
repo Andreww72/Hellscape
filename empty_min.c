@@ -148,6 +148,8 @@ int main(void) {
         while (1) {} // stop here if it dies
     }
 
+    //startMotor(50);
+
     // Enable interrupts
     IntMasterEnable();
 

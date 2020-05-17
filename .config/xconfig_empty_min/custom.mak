@@ -7,5 +7,5 @@
 #       or equal to the generated config header
 #
 linker.cmd: package/cfg/empty_min_pem4f.xdl
-	$(SED) 's"^\"\(package/cfg/empty_min_pem4fcfg.cmd\)\"$""\"C:/Users/jshea/workspace_v9/Assignment/.config/xconfig_empty_min/\1\""' package/cfg/empty_min_pem4f.xdl > $@
+	$(SED) 's"^\"\(package/cfg/empty_min_pem4fcfg.cmd\)\"$""\"C:/Users/jshea/Documents/EGH456/.config/xconfig_empty_min/\1\""' package/cfg/empty_min_pem4f.xdl > $@
 	-$(SETDATE) -r:max package/cfg/empty_min_pem4f.h compiler.opt compiler.opt.defs

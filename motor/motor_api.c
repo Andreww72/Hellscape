@@ -7,21 +7,28 @@
 
 #include "motor_api.h"
 
-#define PWM 50
+#define PWM 50.0
+#define MAX_DUTY_MS (PWM / 2.0)
+#define SYSTICK_PERIOD_MIN (10.0 / 60000.0)
 
-// GPIO Interrupts
+float rotations = 0;
+float speed_rpm = 0;
+float cum_speed_error = 0;
 
-void callbackFxn(unsigned int index) {
+void checkSpeed() {
+    speed_rpm = rotations / SYSTICK_PERIOD_MIN;
+    rotations = 0;
+}
+
+void motorUpdateFunc() {
     updateMotor(GPIO_read(Board_HALLA),
                 GPIO_read(Board_HALLB),
                 GPIO_read(Board_HALLC));
 }
 
 void rotationCallbackFxn(unsigned int index) {
-    inc_rotations();
-    updateMotor(GPIO_read(Board_HALLA),
-                GPIO_read(Board_HALLB),
-                GPIO_read(Board_HALLC));
+    rotations += 1.0 / 6.0;
+    motorUpdateFunc();
 }
 
 bool initMotor() {
@@ -30,14 +37,20 @@ bool initMotor() {
 
     return_val = initMotorLib(PWM, eb);
 
-    GPIO_setCallback(Board_HALLA, callbackFxn);
-    GPIO_setCallback(Board_HALLB, callbackFxn);
-    GPIO_setCallback(Board_HALLC, callbackFxn);
+    GPIO_setConfig(Board_HALLA, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
+    GPIO_setConfig(Board_HALLB, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
+    GPIO_setConfig(Board_HALLC, GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES);
+
+    GPIO_setCallback(Board_HALLA, rotationCallbackFxn);
+    GPIO_setCallback(Board_HALLB, rotationCallbackFxn);
+    GPIO_setCallback(Board_HALLC, rotationCallbackFxn);
 
     // Enable interrupts for Hall Sensors
     GPIO_enableInt(Board_HALLA);
     GPIO_enableInt(Board_HALLB);
     GPIO_enableInt(Board_HALLC);
+
+    // set up a swi for 100kHz
 
     if (return_val == 0) {
         System_printf("%s\n", eb->msg);
@@ -47,15 +60,15 @@ bool initMotor() {
     return return_val;
 }
 
-void startMotor(int duty_pct) {
-    float duty_ms = (duty_pct / 100.0) * PWM;
-
-//    int return_val;
+void startMotor(int rpm) {
+//  int return_val;
     enableMotor();
-    setDuty(duty_ms);
-    updateMotor(GPIO_read(Board_HALLA),
-                GPIO_read(Board_HALLB),
-                GPIO_read(Board_HALLC));
+    setSpeed(10);
+    motorUpdateFunc();
+}
+
+void eStopMotor() {
+    //pass
 }
 
 void stopMotor_api() {
@@ -63,11 +76,9 @@ void stopMotor_api() {
     disableMotor();
 }
 
-int setSpeed(int duty_pct) {
-    //pass
-
-    // get current speed, find error with new speed
-    // calculate new pwm
-
+int setSpeed(int rpm) {
+//    float duty_ms = duty_pct * 100.0 / PWM;
+    float duty_ms = 25;
+    setDuty(duty_ms);
     return 0;
 }
