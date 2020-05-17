@@ -11,10 +11,12 @@
 #define ADC_SEQ 0
 #define ADC_PRI 0
 #define ADC_STEP 0
-#define V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define RESISTANCE 2500.0 // Page 1861 says 2500 ohms for Radc
-#define RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
-#define V_NEUTRAL V_REF / 2.0 // Centralise reading
+#define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
+#define ADC_RESISTANCE 2500.0 // Page 1861 says 2500 ohms for Radc
+#define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
+#define ADC_V_NEUTRAL ADC_V_REF / 2.0 // Centralise reading
+
+#define TMP_RESOLUTION 0.015625
 
 // Data window size constants
 #define windowLight 5
@@ -98,11 +100,12 @@ bool init_temp() {
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swi_temp, 1, &clkParams);
 
-//    UART_Params uartParams;
-//    UART_Params_init(&uartParams);
-//    uartParams.baudRate = 115200;
+    UART_Params uartParams;
+    UART_Params_init(&uartParams);
+    uartParams.baudRate = 115200;
 
     // TODO Setup UART connection for board TMP107
+    // TODO Figure out the ports and pins then copy what I did for motor temp
 //    uartBoard = UART_open(Board_UART?, &uartParams);
 //    if (uartBoard == NULL) {
 //         System_abort("Error opening the UART");
@@ -110,43 +113,48 @@ bool init_temp() {
     // TODO Setup board TMP107 temperature sensor
 
 
-    // TODO Setup UART connection for motor TMP107
+    // Setup UART connection for motor TMP107
     // UART7 and GPIO setup statically in EK file
     // TMP107_TX on PC4 with UART RX7
     // TMP107_RX on PC5 with UART TX7
-//    uartMotor = UART_open(Board_UART7, &uartParams);
-//    if (uartMotor == NULL) {
-//         System_abort("Error opening the UART");
-//     }
-//    // TODO Setup motor TM107 temperature sensor
-//    // Temperature register 0h (page 23)
-//    // Configuration register 1h (page 24)
-//
-//    uint8_t setupCalibrationByte = 0x55;
-//    uint8_t setupCommandPhase = 0b10101001;
-//    //uint8_t setupAddressAssign = 0b101AAAAA;
-//    uint8_t setup[3];
-//    setup[0] = setupCalibrationByte;
-//    setup[1] = setupCalibrationByte;
-//    setup[2] = setupCalibrationByte;
+    uartMotor = UART_open(Board_UART7, &uartParams);
+    if (uartMotor == NULL) {
+         System_abort("Error opening the UART");
+     }
+    // TODO Setup motor TM107 temperature sensor
+    // Start on doc page 14
+    uint8_t initTMP[3];
+    uint8_t setTMP[5];
+    uint8_t response[1];
 
-    //UART_write(uartMotor, &setup, 3);
+    uint8_t calibrationByte = 0x55;
+    uint8_t addressInitialiseByte = 0b10101001;
+    uint8_t addressAssignByte = 0b10100001;
+    uint8_t individualWriteByte = 0b00000001;
+    // Configuration register 1h (page 24)
+    uint8_t regPointerByte = 0b00000101;
+    // What I want in config reg is 0b1000000100010000
+    // However LSB is sent first thus:
+    uint8_t configRegWord1 = 0b00001000;
+    uint8_t configRegWord2 = 0b10000001;
 
-    // Address initialise (page 17)
+    initTMP[0] = calibrationByte;
+    initTMP[1] = addressInitialiseByte;
+    initTMP[2] = addressAssignByte;
+    setTMP[0] = calibrationByte;
+    setTMP[1] = individualWriteByte;
+    setTMP[2] = regPointerByte;
+    setTMP[3] = configRegWord1;
+    setTMP[4] = configRegWord2;
 
-    // Calibration phase
-
-    // Command and address phase
-
-    // Register pointer phase
-
-    // Data phase
-
-    // Initialise Calibration Constants
-
-    //UART_read(uartMotor, &buffer, 3);
+    // Write setup data to TMP107
+    int writeInit = UART_write(uartMotor, &initTMP, 3);
+    int writeSet = UART_write(uartMotor, &setTMP, 3);
+    //Read device ok response
+    int readResp = UART_read(uartMotor, &response, 1);
 
     System_printf("Temperature setup\n");
+    System_printf("%d %d %d\n", writeInit, writeSet, readResp);
     System_flush();
 
     return true;
@@ -214,17 +222,38 @@ void swi_light(UArg arg) {
 // Read and filter board and motor temperature sensors over UART
 void swi_temp(UArg arg) {
     // Board temperature
+    // TODO board temperature via UART
     boardTemp = 25;
 
-    // Motor sensor next to the motor3
-    // Get temp
-    // Calc temp
-    // To convert a positive digital data format to temperature:
-    // Convert the 14-bit, left-justified, binary temperature result to a decimal number. Then, multiply the decimal
-    // number by the resolution to obtain the positive temperature.
-    // Example: 00 1100 1000 0000 = C80h = 3200 × (0.015625°C / LSB) = 50°C
-    // Set temp
-    motorTemp = 25;
+    // Motor temperature
+    uint8_t read[3];
+    uint8_t response[2];
+    uint8_t calibrationByte = 0x55;
+    uint8_t individualReadByte = 0b01000001;
+    // Temperature register 0h (page 23)
+    uint8_t regPointerByte = 000000101;
+
+    read[0] = calibrationByte;
+    read[1] = individualReadByte;
+    read[2] = regPointerByte;
+
+    // Write command
+    UART_write(uartMotor, &read, 3);
+    // Read response
+    UART_read(uartMotor, &response, 2);
+
+    System_printf("Temp:%d", response[0]);
+    System_printf("Temp:%d", response[1]);
+    System_flush();
+
+    // Calculate temperature from binary result
+    // Bits 15-2 contain temperature result. Bits 1-0 can be ignored
+    // Example: 00 1100 1000 0000 = C80h = 3200 × (TMP_RESOLUTION / LSB)
+    // Convert the 14-bit, left-justified, binary temperature to decimal
+    uint16_t result = ((response[0] << 8) | (response[1] & 0xff)) >> 2;
+
+    // Multiply decimal by resolution
+    motorTemp = result * TMP_RESOLUTION;
 }
 
 // Read and filter two motor phase currents via analogue signals
@@ -259,14 +288,14 @@ void swi_current(UArg arg) {
     // Analogue voltage = ADC reading * system voltage / ADC resolution
 
     // Convert digital value
-    V_OutA = ((ADC0ValueB[0] & twelve_bitmask) * V_REF) / RESOLUTION;
+    V_OutA = ((ADC0ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorB = (V_OutA - V_NEUTRAL) / RESISTANCE;
+    currentSensorB = (V_OutA - ADC_V_NEUTRAL) / ADC_RESISTANCE;
 
     // Convert digital value
-    V_OutB = ((ADC1ValueC[0] & twelve_bitmask) * V_REF) / RESOLUTION;
+    V_OutB = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorC = (V_OutB - V_NEUTRAL) / RESISTANCE;
+    currentSensorC = (V_OutB - ADC_V_NEUTRAL) / ADC_RESISTANCE;
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
