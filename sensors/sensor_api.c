@@ -7,24 +7,39 @@
 
 #include "sensor_api.h"
 
+// Data window sizes
 #define windowLight 5
 #define windowTemp 3
 #define windowCurrent 5
 #define windowAcceleration 5
 
+// Current sensor values
+#define VCC 5 // According to sensor datasheet
+#define SENSITIVITY 0.2 // 200 millVolts/A = 0.2 V/A for 10 AB (our current sensor)
+#define FIRST_STEP 0
+#define ADC_SEQUENCE 0 // Could be any value from 0 to 3 since only one sample is needed at a given request
+#define ADC_PRIORITY 0
+#define RESOLUTION 4095 // max digital value for 12 bit sample
+#define REF_VOLTAGE_PLUS 3.3 // Reference voltage used for ADC process, given in page 2149 of TM4C129XNCZAD Microcontroller Data Sheet
+#define NEUTRAL_VIOUT 0.5*VCC
+
+// Data collectors (before filtering)
 uint8_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
 uint8_t currentSensorBBuffer[windowCurrent];
 uint8_t currentSensorCBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
+
+// Current values (after filtering)
 uint8_t light = 100;
 uint8_t boardTemp = 25;
 uint8_t motorTemp = 25;
-uint8_t currentSensorB = 0;
-uint8_t currentSensorC = 0;
+float currentSensorB = 0;
+float currentSensorC = 0;
 uint8_t acceleration = 0;
 
+// Setup handles
 UART_Handle uartBoard;
 UART_Handle uartMotor;
 Clock_Params clkParams;
@@ -38,7 +53,7 @@ void swi_light(UArg arg);
 void swi_temp(UArg arg);
 void swi_current(UArg arg);
 void swi_acceleration(UArg arg);
-static double calcTemp(double previous, int32_t status);
+static float calcTemp(float previous, float status);
 
 ///////////**************??????????????
 // God tier make everything work fxn //
@@ -82,9 +97,9 @@ bool init_temp() {
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swi_temp, 1, &clkParams);
 
-    UART_Params uartParams;
-    UART_Params_init(&uartParams);
-    uartParams.baudRate = 115200;
+//    UART_Params uartParams;
+//    UART_Params_init(&uartParams);
+//    uartParams.baudRate = 115200;
 
     // TODO Setup UART connection for board TMP107
 //    uartBoard = UART_open(Board_UART?, &uartParams);
@@ -98,23 +113,23 @@ bool init_temp() {
     // UART7 and GPIO setup statically in EK file
     // TMP107_TX on PC4 with UART RX7
     // TMP107_RX on PC5 with UART TX7
-    uartMotor = UART_open(Board_UART7, &uartParams);
-    if (uartMotor == NULL) {
-         System_abort("Error opening the UART");
-     }
-    // TODO Setup motor TM107 temperature sensor
-    // Temperature register 0h (page 23)
-    // Configuration register 1h (page 24)
+//    uartMotor = UART_open(Board_UART7, &uartParams);
+//    if (uartMotor == NULL) {
+//         System_abort("Error opening the UART");
+//     }
+//    // TODO Setup motor TM107 temperature sensor
+//    // Temperature register 0h (page 23)
+//    // Configuration register 1h (page 24)
+//
+//    uint8_t setupCalibrationByte = 0x55;
+//    uint8_t setupCommandPhase = 0b10101001;
+//    //uint8_t setupAddressAssign = 0b101AAAAA;
+//    uint8_t setup[3];
+//    setup[0] = setupCalibrationByte;
+//    setup[1] = setupCalibrationByte;
+//    setup[2] = setupCalibrationByte;
 
-    uint8_t setupCalibrationByte = 0x55;
-    uint8_t setupCommandPhase = 0b10101001;
-    //uint8_t setupAddressAssign = 0b101AAAAA;
-    uint8_t setup[3];
-    setup[0] = setupCalibrationByte;
-    setup[1] = setupCalibrationByte;
-    setup[2] = setupCalibrationByte;
-
-    UART_write(uartMotor, &setup, 3);
+    //UART_write(uartMotor, &setup, 3);
 
     // Address initialise (page 17)
 
@@ -137,15 +152,6 @@ bool init_temp() {
 }
 
 // CURRENT SETUP
-#define VCC 5 // According to sensor datasheet
-#define SENSITIVITY 0.2 // 200 millVolts/A = 0.2 V/A for 10 AB (our current sensor)
-#define FIRST_STEP 0
-#define SEQUENCE 0 // Could be any value from 0 to 3 since only one sample is needed at a given request
-#define ADC_PRIORITY 0
-#define RESOLUTION 4095 // max digital value for 12 bit sample
-#define REF_VOLTAGE_PLUS 3.3 // Reference voltage used for ADC process, given in page 2149 of TM4C129XNCZAD Microcontroller Data Sheet
-#define NEUTRAL_VIOUT 0.5*VCC
-
 bool init_current() {
     // Current sensors B and C on ADCs, A is not and thus not done.
     // Note GPIO ports already setup in EK file
@@ -153,18 +159,18 @@ bool init_current() {
     // Current sensor B on D7 with ADC channel 4
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
     GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
-    ADCSequenceConfigure(ADC0_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceStepConfigure(ADC0_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceEnable(ADC0_BASE, SEQUENCE);
-    ADCIntClear(ADC0_BASE, SEQUENCE);
+    ADCSequenceConfigure(ADC0_BASE, ADC_SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
+    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
+    ADCSequenceEnable(ADC0_BASE, ADC_SEQUENCE);
+    ADCIntClear(ADC0_BASE, ADC_SEQUENCE);
 
     // Current sensor C on E3 with ADC channel 3
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
-    ADCSequenceConfigure(ADC1_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceStepConfigure(ADC1_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
-    ADCSequenceEnable(ADC1_BASE, SEQUENCE);
-    ADCIntClear(ADC1_BASE, SEQUENCE);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQUENCE);
+    ADCIntClear(ADC1_BASE, ADC_SEQUENCE);
 
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swi_current, 1, &clkParams);
@@ -226,21 +232,22 @@ void swi_current(UArg arg) {
     double VIOUT = 0;
 
     // Trigger the ADC conversion.
-    ADCProcessorTrigger(ADC0_BASE, SEQUENCE);
-    ADCProcessorTrigger(ADC1_BASE, SEQUENCE);
+    ADCProcessorTrigger(ADC0_BASE, ADC_SEQUENCE);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQUENCE);
 
     // Wait for conversion to be completed.
-    while(!ADCIntStatus(ADC0_BASE, SEQUENCE, false));
-    while(!ADCIntStatus(ADC1_BASE, SEQUENCE, false));
+    while(!ADCIntStatus(ADC0_BASE, ADC_SEQUENCE, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQUENCE, false));
 
-    //Clear ADC Interrupt
-    ADCIntClear(ADC0_BASE, SEQUENCE);
-    ADCIntClear(ADC1_BASE, SEQUENCE);
+    // Clear ADC Interrupt
+    ADCIntClear(ADC0_BASE, ADC_SEQUENCE);
+    ADCIntClear(ADC1_BASE, ADC_SEQUENCE);
 
     // Read ADC Value.
-    ADCSequenceDataGet(ADC0_BASE, SEQUENCE, pui32ADC0ValueB);
-    ADCSequenceDataGet(ADC1_BASE, SEQUENCE, pui32ADC0ValueC);
+    ADCSequenceDataGet(ADC0_BASE, ADC_SEQUENCE, pui32ADC0ValueB);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQUENCE, pui32ADC0ValueC);
 
+    // TODO Check these calcs and #defines
     // Convert digital value to current reading (VREF- is 0, so it can be ignored)
     VIOUT = ((pui32ADC0ValueB[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
     currentSensorB = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
@@ -281,16 +288,16 @@ uint8_t get_motorTemp() {
     return motorTemp;
 }
 
-uint8_t get_currentSensorB() {
+float get_currentSensorB() {
     return currentSensorB;
 }
 
-uint8_t get_currentSensorC() {
+float get_currentSensorC() {
     return currentSensorC;
 }
 
-uint8_t get_currentTotal() {
-    return (currentSensorB + currentSensorC) * 3 / 2;
+float get_currentTotal() {
+    return (currentSensorB + currentSensorC) * 3.0 / 2.0;
 }
 
 uint8_t get_acceleration() {
@@ -300,6 +307,6 @@ uint8_t get_acceleration() {
 ///////////**************??????????????
 //              Helpers              //
 ///////////**************??????????????
-static double calcTemp(double previous, int32_t status) {
+static float calcTemp(float previous, float status) {
     return status;
 }
