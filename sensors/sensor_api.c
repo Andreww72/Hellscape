@@ -7,21 +7,20 @@
 
 #include "sensor_api.h"
 
-// Data window sizes
+// Current sensor constants
+#define ADC_SEQ 0
+#define ADC_PRI 0
+#define ADC_STEP 0
+#define V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
+#define RESISTANCE 2500.0 // Page 1861 says 2500 ohms for Radc
+#define RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
+#define V_NEUTRAL V_REF / 2.0 // Centralise reading
+
+// Data window size constants
 #define windowLight 5
 #define windowTemp 3
 #define windowCurrent 5
 #define windowAcceleration 5
-
-// Current sensor values
-#define VCC 5 // According to sensor datasheet
-#define SENSITIVITY 0.2 // 200 millVolts/A = 0.2 V/A for 10 AB (our current sensor)
-#define FIRST_STEP 0
-#define ADC_SEQUENCE 0 // Could be any value from 0 to 3 since only one sample is needed at a given request
-#define ADC_PRIORITY 0
-#define RESOLUTION 4095 // max digital value for 12 bit sample
-#define REF_VOLTAGE_PLUS 3.3 // Reference voltage used for ADC process, given in page 2149 of TM4C129XNCZAD Microcontroller Data Sheet
-#define NEUTRAL_VIOUT 0.5*VCC
 
 // Data collectors (before filtering)
 uint8_t lightBuffer[windowLight];
@@ -48,12 +47,15 @@ Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
 
-// SWI function prototypes
+// Function prototypes that are not in the .h
+bool init_light();
+bool init_temp();
+bool init_current();
+bool init_acceleration(uint8_t threshold);
 void swi_light(UArg arg);
 void swi_temp(UArg arg);
 void swi_current(UArg arg);
 void swi_acceleration(UArg arg);
-static float calcTemp(float previous, float status);
 
 ///////////**************??????????????
 // God tier make everything work fxn //
@@ -74,7 +76,6 @@ bool init_sensors(uint8_t accel_threshold){
 ///////////**************??????????????
 //   Implementations sensor setups   //
 ///////////**************??????????????
-
 // LIGHT SETUP
 bool init_light() {
     // Create a recurring 2Hz SWI swi_light
@@ -159,18 +160,18 @@ bool init_current() {
     // Current sensor B on D7 with ADC channel 4
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
     GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
-    ADCSequenceConfigure(ADC0_BASE, ADC_SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceEnable(ADC0_BASE, ADC_SEQUENCE);
-    ADCIntClear(ADC0_BASE, ADC_SEQUENCE);
+    ADCSequenceConfigure(ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
+    ADCSequenceEnable(ADC0_BASE, ADC_SEQ);
+    ADCIntClear(ADC0_BASE, ADC_SEQ);
 
     // Current sensor C on E3 with ADC channel 3
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
-    ADCSequenceConfigure(ADC1_BASE, ADC_SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
-    ADCSequenceEnable(ADC1_BASE, ADC_SEQUENCE);
-    ADCIntClear(ADC1_BASE, ADC_SEQUENCE);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQ);
+    ADCIntClear(ADC1_BASE, ADC_SEQ);
 
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swi_current, 1, &clkParams);
@@ -206,14 +207,14 @@ bool init_acceleration(uint8_t threshold) {
 // Read and filter light over I2C
 void swi_light(UArg arg) {
     // On sensor booster pack
-    // Copy what we did in lab 4 ish
+    // Copy what we did in lab 4
     light = 100;
 }
 
 // Read and filter board and motor temperature sensors over UART
 void swi_temp(UArg arg) {
     // Board temperature
-    boardTemp = calcTemp(25, 25);
+    boardTemp = 25;
 
     // Motor sensor next to the motor3
     // Get temp
@@ -223,38 +224,49 @@ void swi_temp(UArg arg) {
     // number by the resolution to obtain the positive temperature.
     // Example: 00 1100 1000 0000 = C80h = 3200 × (0.015625°C / LSB) = 50°C
     // Set temp
-    motorTemp = calcTemp(25, 25);
+    motorTemp = 25;
 }
 
 // Read and filter two motor phase currents via analogue signals
 void swi_current(UArg arg) {
-    uint32_t pui32ADC0ValueB[1], pui32ADC0ValueC[1], twelve_bitmask = 0xfff;
-    double VIOUT = 0;
+    uint32_t ADC0ValueB[1], ADC1ValueC[1];
+    uint32_t twelve_bitmask = 0xfff;
+    float V_OutA = 0;
+    float V_OutB = 0;
 
     // Trigger the ADC conversion.
-    ADCProcessorTrigger(ADC0_BASE, ADC_SEQUENCE);
-    ADCProcessorTrigger(ADC1_BASE, ADC_SEQUENCE);
+    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQ);
 
     // Wait for conversion to be completed.
-    while(!ADCIntStatus(ADC0_BASE, ADC_SEQUENCE, false));
-    while(!ADCIntStatus(ADC1_BASE, ADC_SEQUENCE, false));
+    while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQ, false));
 
     // Clear ADC Interrupt
-    ADCIntClear(ADC0_BASE, ADC_SEQUENCE);
-    ADCIntClear(ADC1_BASE, ADC_SEQUENCE);
+    ADCIntClear(ADC0_BASE, ADC_SEQ);
+    ADCIntClear(ADC1_BASE, ADC_SEQ);
 
     // Read ADC Value.
-    ADCSequenceDataGet(ADC0_BASE, ADC_SEQUENCE, pui32ADC0ValueB);
-    ADCSequenceDataGet(ADC1_BASE, ADC_SEQUENCE, pui32ADC0ValueC);
+    ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, ADC0ValueB);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQ, ADC1ValueC);
 
-    // TODO Check these calcs and #defines
-    // Convert digital value to current reading (VREF- is 0, so it can be ignored)
-    VIOUT = ((pui32ADC0ValueB[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
-    currentSensorB = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
+    // CONVERT TO DIGITAL THAN CURRENT
+    // https://www.ti.com/lit/ds/symlink/tm4c1294ncpdt.pdf
+    // Page 1861 section contains relevant information for constants
 
-    // Convert digital value to current reading (VREF- is 0, so it can be ignored)
-    VIOUT = ((pui32ADC0ValueC[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
-    currentSensorC = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
+    // https://learn.sparkfun.com/tutorials/analog-to-digital-conversion/relating-adc-value-to-voltage
+    // ADC resolution / system voltage = ADC reading / analogue voltage
+    // Analogue voltage = ADC reading * system voltage / ADC resolution
+
+    // Convert digital value
+    V_OutA = ((ADC0ValueB[0] & twelve_bitmask) * V_REF) / RESOLUTION;
+    // I = V / R
+    currentSensorB = (V_OutA - V_NEUTRAL) / RESISTANCE;
+
+    // Convert digital value
+    V_OutB = ((ADC1ValueC[0] & twelve_bitmask) * V_REF) / RESOLUTION;
+    // I = V / R
+    currentSensorC = (V_OutB - V_NEUTRAL) / RESISTANCE;
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
@@ -302,11 +314,4 @@ float get_currentTotal() {
 
 uint8_t get_acceleration() {
     return acceleration;
-}
-
-///////////**************??????????????
-//              Helpers              //
-///////////**************??????????????
-static float calcTemp(float previous, float status) {
-    return status;
 }
