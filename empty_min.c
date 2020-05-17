@@ -130,7 +130,6 @@ bool setupGUI(uint32_t ui32SysClock) {
         return 0;
     }
 
-
     Clock_Params clkParams;
     Clock_Params_init(&clkParams);
     clkParams.period = 1000;
@@ -160,7 +159,7 @@ int main(void) {
         System_flush();
         while (1) {} // stop here if it dies
     }
-    if (!init_sensors(1)) {
+    if (!initSensors(1)) {
         System_printf("Sensor initialisation failed\n");
         System_flush();
         while (1) {} // stop here if it dies

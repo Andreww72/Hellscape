@@ -21,23 +21,23 @@
 #include "motor/motor_api.h"
 
 // Initialises all the sensors:
-// Light, board temp, motor temp,
-bool init_sensors(uint8_t accel_threshold);
+// Light, board temp, motor temp, currents, acceleration (and interrupt)
+bool initSensors(uint8_t accel_threshold);
 
 // Read and filter light over I2C
-uint8_t get_light();
+uint8_t getLight();
 
 // Read and filter board and motor temperature sensors over UART
-uint8_t get_boardTemp();
-uint8_t get_motorTemp();
+uint8_t getBoardTemp();
+uint8_t getMotorTemp();
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
-float get_currentSensorB();
-float get_currentSensorC();
-float get_currentTotal();
+float getCurrentSensorB();
+float getCurrentSensorC();
+float getCurrentTotal();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
-uint8_t get_acceleration();
+uint8_t getAcceleration();
 
 #endif /* SENSORS_SENSOR_API_H_ */

@@ -49,40 +49,43 @@ Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
 
-// Function prototypes that are not in the .h
-bool init_light();
-bool init_temp();
-bool init_current();
-bool init_acceleration(uint8_t threshold);
-void swi_light(UArg arg);
-void swi_temp(UArg arg);
-void swi_current(UArg arg);
-void swi_acceleration(UArg arg);
+// Function prototypes that are not in the .h (deliberately)
+bool initLight();
+bool initBoardTemp();
+bool initMotorTemp();
+bool initCurrent();
+bool initAcceleration(uint8_t threshold);
+void swiLight(UArg arg);
+void swiBoardTemp(UArg arg);
+void swiMotorTemp(UArg arg);
+void swiCurrent(UArg arg);
+void swiAcceleration(UArg arg);
 
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool init_sensors(uint8_t accel_threshold){
+bool initSensors(uint8_t accel_threshold){
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
     return
-            init_light() &&
-            init_temp() &&
-            init_current() &&
-            init_acceleration(accel_threshold);
+            initLight() &&
+            initBoardTemp() &&
+            initMotorTemp() &&
+            initCurrent() &&
+            initAcceleration(accel_threshold);
 }
 
 ///////////**************??????????????
 //   Implementations sensor setups   //
 ///////////**************??????????????
 // LIGHT SETUP
-bool init_light() {
+bool initLight() {
     // Create a recurring 2Hz SWI swi_light
     clkParams.period = 500;
-    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swi_light, 1, &clkParams);
+    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
     // TODO Setup I2C connection to OPT3001
 
@@ -95,10 +98,10 @@ bool init_light() {
 }
 
 // TEMPERATURE SETUP
-bool init_temp() {
+bool initBoardTemp() {
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swi_temp, 1, &clkParams);
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)initBoardTemp, 1, &clkParams);
 
     UART_Params uartParams;
     UART_Params_init(&uartParams);
@@ -106,12 +109,25 @@ bool init_temp() {
 
     // TODO Setup UART connection for board TMP107
     // TODO Figure out the ports and pins then copy what I did for motor temp
-//    uartBoard = UART_open(Board_UART?, &uartParams);
-//    if (uartBoard == NULL) {
-//         System_abort("Error opening the UART");
-//     }
+    // PROBABLY ISN'T UART0
+    uartBoard = UART_open(Board_UART0, &uartParams);
+    if (uartBoard == NULL) {
+         System_abort("Error opening the UART");
+     }
+
     // TODO Setup board TMP107 temperature sensor
 
+    return true;
+}
+
+bool initMotorTemp() {
+    // Create a recurring 2Hz SWI swi_temp
+    clkParams.period = 500;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
+
+    UART_Params uartParams;
+    UART_Params_init(&uartParams);
+    uartParams.baudRate = 115200;
 
     // Setup UART connection for motor TMP107
     // UART7 and GPIO setup statically in EK file
@@ -161,7 +177,7 @@ bool init_temp() {
 }
 
 // CURRENT SETUP
-bool init_current() {
+bool initCurrent() {
     // Current sensors B and C on ADCs, A is not and thus not done.
     // Note GPIO ports already setup in EK file
 
@@ -182,7 +198,7 @@ bool init_current() {
     ADCIntClear(ADC1_BASE, ADC_SEQ);
 
     clkParams.period = 4;
-    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swi_current, 1, &clkParams);
+    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
 
     System_printf("Current setup\n", currentSensorC);
     System_flush();
@@ -193,10 +209,10 @@ bool init_current() {
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-bool init_acceleration(uint8_t threshold) {
+bool initAcceleration(uint8_t threshold) {
     // Create a recurring 200Hz SWI swi_acceleration
     clkParams.period = 5;
-    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swi_acceleration, 1, &clkParams);
+    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkParams);
 
     // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
 
@@ -213,19 +229,21 @@ bool init_acceleration(uint8_t threshold) {
 ///////////**************??????????????
 
 // Read and filter light over I2C
-void swi_light(UArg arg) {
+void swiLight(UArg arg) {
     // On sensor booster pack
     // Copy what we did in lab 4
     light = 100;
 }
 
-// Read and filter board and motor temperature sensors over UART
-void swi_temp(UArg arg) {
-    // Board temperature
-    // TODO board temperature via UART
+// Read and filter motor temperature sensors over UART
+void swiBoardTemp(UArg arg) {
+    // TODO read board temperature via UART
+    // Probably copy swiMotorTemp
     boardTemp = 25;
+}
 
-    // Motor temperature
+// Read and filter motor temperature sensors over UART
+void swiMotorTemp(UArg arg) {
     uint8_t read[3];
     uint8_t response[2];
     uint8_t calibrationByte = 0x55;
@@ -257,7 +275,7 @@ void swi_temp(UArg arg) {
 }
 
 // Read and filter two motor phase currents via analogue signals
-void swi_current(UArg arg) {
+void swiCurrent(UArg arg) {
     uint32_t ADC0ValueB[1], ADC1ValueC[1];
     uint32_t twelve_bitmask = 0xfff;
     float V_OutA = 0;
@@ -300,7 +318,7 @@ void swi_current(UArg arg) {
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-void swi_acceleration(UArg arg) {
+void swiAcceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
     // ABS is calculated from those three in a getter
@@ -308,7 +326,7 @@ void swi_acceleration(UArg arg) {
 }
 
 // Accelerometer interrupt when crash threshold reached
-void callback_accelerometer(UArg arg) {
+void callbackAccelerometer(UArg arg) {
     // TODO Change this to the estop method once made
     stopMotor_api();
 }
@@ -317,30 +335,30 @@ void callback_accelerometer(UArg arg) {
 //              Getters              //
 ///////////**************??????????????
 
-uint8_t get_light() {
+uint8_t getLight() {
     return light;
 }
 
-uint8_t get_boardTemp() {
+uint8_t getBoardTemp() {
     return boardTemp;
 }
 
-uint8_t get_motorTemp() {
+uint8_t getMotorTemp() {
     return motorTemp;
 }
 
-float get_currentSensorB() {
+float getCurrentSensorB() {
     return currentSensorB;
 }
 
-float get_currentSensorC() {
+float getCurrentSensorC() {
     return currentSensorC;
 }
 
-float get_currentTotal() {
+float getCurrentTotal() {
     return (currentSensorB + currentSensorC) * 3.0 / 2.0;
 }
 
-uint8_t get_acceleration() {
+uint8_t getAcceleration() {
     return acceleration;
 }
