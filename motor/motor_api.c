@@ -15,12 +15,19 @@ float speed_rpm = 0;
 
 // GPIO Interrupts
 
-void checkSpeed() {
+void updateSpeed() {
     speed_rpm = rotations / SYSTICK_PERIOD_MIN;
+    rotations = 0;
+}
+
+void checkSpeed() {
+    updateSpeed();
 }
 
 void inc_rotations() {
     rotations += 1.0 / 6.0;
+//    System_printf("%f\n", speed_rpm);
+//    System_flush();
 }
 
 void motorUpdateFunc() {

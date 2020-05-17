@@ -236,9 +236,9 @@ void swi_current(UArg arg) {
     VIOUT = ((pui32ADC0ValueC[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
     currentSensorC = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
 
-    System_printf("B: %d\n", currentSensorB);
-    System_printf("C: %d\n", currentSensorC);
-    System_flush();
+//    System_printf("B: %d\n", currentSensorB);
+//    System_printf("C: %d\n", currentSensorC);
+//    System_flush();
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
