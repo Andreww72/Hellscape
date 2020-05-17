@@ -17,14 +17,23 @@ GateHwi_Params gHwiprms;
 float rotations = 0;
 float speed_rpm = 0;
 float cum_speed_error = 0;
+//int executed = 0;
 
 void checkSpeed() {
+//    executed++;
+//    if (executed == 1000) {
+//        UInt key;
+//        key = GateHwi_enter(gateHwi);
+//        System_printf("%f\n", speed_rpm);
+//        GateHwi_leave(gateHwi, key);
+//        System_flush();
+//        executed = 0;
+//    }
     UInt key;
-
     key = GateHwi_enter(gateHwi);
     speed_rpm = rotations / SYSTICK_PERIOD_MIN;
-    float speed = speed_rpm;
     rotations = 0;
+//    System_printf("%f\n", speed_rpm);
     GateHwi_leave(gateHwi, key);
 }
 
@@ -39,6 +48,7 @@ void rotationCallbackFxn(unsigned int index) {
     key = GateHwi_enter(gateHwi);
     rotations += 1.0 / 6.0;
     GateHwi_leave(gateHwi, key);
+//    System_printf("%d%d%d-%d\n", GPIO_read(Board_HALLA), GPIO_read(Board_HALLB), GPIO_read(Board_HALLC), index);
     motorUpdateFunc();
 }
 
@@ -80,7 +90,7 @@ bool initMotor() {
 void startMotor(int rpm) {
 //  int return_val;
     enableMotor();
-    setSpeed(10);
+    setSpeed(40);
     motorUpdateFunc();
 }
 
@@ -95,7 +105,7 @@ void stopMotor_api() {
 
 int setSpeed(int rpm) {
 //    float duty_ms = duty_pct * 100.0 / PWM;
-    float duty_ms = 25;
+    float duty_ms = 4;
     setDuty(duty_ms);
     return 0;
 }
