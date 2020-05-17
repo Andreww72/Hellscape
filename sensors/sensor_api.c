@@ -10,11 +10,13 @@
 #include <ti/sysbios/knl/Clock.h>
 
 #include "sensor_api.h"
+#include "motor/motor_api.h"
 #include "driverlib/adc.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/gpio.h"
 #include "inc/hw_memmap.h"
 #include <ti/sysbios/knl/Clock.h>
+#include <ti/drivers/UART.h>
 
 #define windowLight 5
 #define windowTemp 3
@@ -34,6 +36,8 @@ uint8_t currentSensorB = 0;
 uint8_t currentSensorC = 0;
 uint8_t acceleration = 0;
 
+UART_Handle uartBoard;
+UART_Handle uartMotor;
 Clock_Params clkParams;
 Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
@@ -45,6 +49,7 @@ void swi_light(UArg arg);
 void swi_temp(UArg arg);
 void swi_current(UArg arg);
 void swi_acceleration(UArg arg);
+static double calcTemp(double previous, int32_t status);
 
 ///////////**************??????????????
 // God tier make everything work fxn //
@@ -72,8 +77,9 @@ bool init_light() {
     clkParams.period = 500;
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swi_light, 1, &clkParams);
 
-    // TODO Setup I2C connection
-    // TODO Setup light sensor on board
+    // TODO Setup I2C connection to OPT3001
+
+    // TODO Setup light OPT3001 on board
 
     System_printf("Light setup\n");
     System_flush();
@@ -87,11 +93,53 @@ bool init_temp() {
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swi_temp, 1, &clkParams);
 
+    UART_Params uartParams;
+    UART_Params_init(&uartParams);
+    uartParams.baudRate = 115200;
+
     // TODO Setup UART connection for board TMP107
+//    uartBoard = UART_open(Board_UART?, &uartParams);
+//    if (uartBoard == NULL) {
+//         System_abort("Error opening the UART");
+//     }
     // TODO Setup board TMP107 temperature sensor
 
+
     // TODO Setup UART connection for motor TMP107
+    // UART7 and GPIO setup statically in EK file
+    // TMP107_TX on PC4 with UART RX7
+    // TMP107_RX on PC5 with UART TX7
+    uartMotor = UART_open(Board_UART7, &uartParams);
+    if (uartMotor == NULL) {
+         System_abort("Error opening the UART");
+     }
     // TODO Setup motor TM107 temperature sensor
+    // Temperature register 0h (page 23)
+    // Configuration register 1h (page 24)
+
+    uint8_t setupCalibrationByte = 0x55;
+    uint8_t setupCommandPhase = 0b10101001;
+    //uint8_t setupAddressAssign = 0b101AAAAA;
+    uint8_t setup[3];
+    setup[0] = setupCalibrationByte;
+    setup[1] = setupCalibrationByte;
+    setup[2] = setupCalibrationByte;
+
+    UART_write(uartMotor, &setup, 3);
+
+    // Address initialise (page 17)
+
+    // Calibration phase
+
+    // Command and address phase
+
+    // Register pointer phase
+
+    // Data phase
+
+    // Initialise Calibration Constants
+
+    //UART_read(uartMotor, &buffer, 3);
 
     System_printf("Temperature setup\n");
     System_flush();
@@ -109,44 +157,24 @@ bool init_temp() {
 #define REF_VOLTAGE_PLUS 3.3 // Reference voltage used for ADC process, given in page 2149 of TM4C129XNCZAD Microcontroller Data Sheet
 #define NEUTRAL_VIOUT 0.5*VCC
 
-// Initialise two of three motor phase current sensors via analogue signal (use ADC)
 bool init_current() {
-    // Current B (D7) and current C (E3) GPIO setup statically
-    // Setup ADC channels 4 (B) and 3 (C)
+    // Current sensors B and C on ADCs, A is not and thus not done.
+    // Note GPIO ports already setup in EK file
 
-    // Initialise ADC hardware (Page 11 of DK-TM4C129X User's Guide has relevant board pin information)
+    // Current sensor B on D7 with ADC channel 4
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
     GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
-
-    // Enable sample sequence 3 with a processor signal trigger. Sequence 3
-    // will do a single sample when the processor sends a signal to start the
-    // conversion. Each ADC module has 4 programmable sequences, sequence 0
-    // to sequence 3. This example is arbitrarily using sequence 3.
     ADCSequenceConfigure(ADC0_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceConfigure(ADC1_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-
-    // Configure step 0 on sequence 0. Sample channel 0 (ADC_CTL_CH0) in
-    // differential mode (ADC_CTL_D) and configure the interrupt flag
-    // (ADC_CTL_IE) to be set when the sample is done. Tell the ADC logic
-    // that this is the last conversion on sequence 3 (ADC_CTL_END). Sequence
-    // 3 has only one programmable step. Sequence 1 and 2 have 4 steps, and
-    // sequence 0 has 8 programmable steps. Since we are only doing a single
-    // conversion using sequence 3 we will only configure step 0. For more
-    // information on the ADC sequences and steps, refer to the datasheet.
     ADCSequenceStepConfigure(ADC0_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceStepConfigure(ADC1_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
-
-    // Since sample sequence 0 is now configured, it must be enabled.
     ADCSequenceEnable(ADC0_BASE, SEQUENCE);
-    ADCSequenceEnable(ADC1_BASE, SEQUENCE);
-
-    // Clear the interrupt status flag.  This is done to make sure the
-    // interrupt flag is cleared before we sample.
     ADCIntClear(ADC0_BASE, SEQUENCE);
+
+    // Current sensor C on E3 with ADC channel 3
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+    ADCSequenceConfigure(ADC1_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
+    ADCSequenceStepConfigure(ADC1_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, SEQUENCE);
     ADCIntClear(ADC1_BASE, SEQUENCE);
 
     clkParams.period = 4;
@@ -167,6 +195,7 @@ bool init_acceleration(uint8_t threshold) {
     Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swi_acceleration, 1, &clkParams);
 
     // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
+
     // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
 
     System_printf("Acceleration setup\n");
@@ -180,7 +209,6 @@ bool init_acceleration(uint8_t threshold) {
 ///////////**************??????????????
 
 // Read and filter light over I2C
-// Sample window size greater than 5 at >= 2Hz
 void swi_light(UArg arg) {
     // On sensor booster pack
     // Copy what we did in lab 4 ish
@@ -188,27 +216,23 @@ void swi_light(UArg arg) {
 }
 
 // Read and filter board and motor temperature sensors over UART
-// Sample window size greater than 3 at >= 2Hz
 void swi_temp(UArg arg) {
-    // Board temp on sensor booster pack
-    // TMP107 sensor
-    // Ports / pins ?
-    boardTemp = 25;
+    // Board temperature
+    boardTemp = calcTemp(25, 25);
 
-    // Motor sensor next to the motor
-    // TMP107 sensor
-    // RX(7): PC4
-    // TX(7): PC5
-    motorTemp = 25;
+    // Motor sensor next to the motor3
+    // Get temp
+    // Calc temp
+    // To convert a positive digital data format to temperature:
+    // Convert the 14-bit, left-justified, binary temperature result to a decimal number. Then, multiply the decimal
+    // number by the resolution to obtain the positive temperature.
+    // Example: 00 1100 1000 0000 = C80h = 3200 × (0.015625°C / LSB) = 50°C
+    // Set temp
+    motorTemp = calcTemp(25, 25);
 }
 
-// Read and filter two motor phase currents via analogue signals on the current sensors
-// Sample window size greater than 5 at >= 250Hz
+// Read and filter two motor phase currents via analogue signals
 void swi_current(UArg arg) {
-    // This array is used for storing the data read from the ADC FIFO. It
-    // must be as large as the FIFO for the sequencer in use. This example
-    // uses sequence 3 which has a FIFO depth of 1. If another sequence
-    // was used with a deeper FIFO, then the array size must be changed.
     uint32_t pui32ADC0ValueB[1], pui32ADC0ValueC[1], twelve_bitmask = 0xfff;
     double VIOUT = 0;
 
@@ -235,24 +259,21 @@ void swi_current(UArg arg) {
     // Convert digital value to current reading (VREF- is 0, so it can be ignored)
     VIOUT = ((pui32ADC0ValueC[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
     currentSensorC = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
-
-    System_printf("B: %d\n", currentSensorB);
-    System_printf("C: %d\n", currentSensorC);
-    System_flush();
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// Sample window size (of each axis) greater than 5 at 200Hz
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
 void swi_acceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
+    // TODO Get acceleration readings on three axes
+    // ABS is calculated from those three in a getter
     acceleration = 1;
 }
 
-// Accelerometer interrupt to detect user defined crash threshold (m/s^2)
+// Accelerometer interrupt when crash threshold reached
 void callback_accelerometer(UArg arg) {
-    // BMI160 Inertial Measurement Sensor
-    // Trigger interrupt when >= threshold
+    // TODO Change this to the estop method once made
+    stopMotor_api();
 }
 
 ///////////**************??????????????
@@ -279,6 +300,17 @@ uint8_t get_currentSensorC() {
     return currentSensorC;
 }
 
+uint8_t get_currentTotal() {
+    return (currentSensorB + currentSensorC) * 3 / 2;
+}
+
 uint8_t get_acceleration() {
     return acceleration;
+}
+
+///////////**************??????????????
+//              Helpers              //
+///////////**************??????????????
+static double calcTemp(double previous, int32_t status) {
+    return status;
 }
