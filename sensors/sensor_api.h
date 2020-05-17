@@ -17,16 +17,13 @@
 bool init_sensors(uint8_t accel_threshold);
 
 // Initialises the light sensor (opt3001)
-bool init_lightSensor();
+bool init_light();
 
-// Initialises the board Temperature Sensors
-bool init_boardTempSensor();
-
-// Initialises the Motor Temperature Sensors
-bool init_motorTempSensor();
+// Initialises the board and motor temperature Sensors
+bool init_temp();
 
 // Initialises two current sensors
-bool init_currentSensors();
+bool init_current();
 
 // Initialises the sensors to find acceleration on the three axis
 // Also setup accelerometer threshold callback.
@@ -36,8 +33,8 @@ bool init_acceleration(uint8_t threshold);
 uint8_t get_light();
 
 // Read and filter board and motor temperature sensors over UART
-uint8_t get_board_temp();
-uint8_t get_motorTemp();
+uint8_t get_boardTemp();
+uint8_t get_MotorTemp();
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
 uint8_t get_currentSensorB();
