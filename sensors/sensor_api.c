@@ -25,7 +25,7 @@
 #define windowAcceleration 5
 
 // Data collectors (before filtering)
-uint8_t lightBuffer[windowLight];
+uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
 uint8_t currentSensorBBuffer[windowCurrent];
@@ -267,7 +267,7 @@ void swiLight(UArg arg) {
     uint16_t data;
     if (!sensorOpt3001Read(&data)) return;
 
-    lighBuffer[_light_head++] = data;
+    lightBuffer[_light_head++] = data;
 }
 
 // Read and filter motor temperature sensors over UART
@@ -371,7 +371,7 @@ void callbackAccelerometer(UArg arg) {
 ///////////**************??????????????
 
 uint8_t getLight() {
-    // Lux must be converted from the raw values as uint16_t is cheaper to store
+    // Lux must be converted from the raw values as uint16_t is cheaper to store -> window of at least 5
     return light;
 }
 

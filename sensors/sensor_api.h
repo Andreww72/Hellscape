@@ -19,6 +19,8 @@
 #include "inc/hw_memmap.h"
 #include <ti/drivers/UART.h>
 #include "motor/motor_api.h"
+#include "sensor_ports.h"
+
 
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
