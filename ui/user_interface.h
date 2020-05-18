@@ -27,6 +27,14 @@ enum page {
     acceleration = 3,
 };
 
+struct E2PROM_SETTINGS
+{
+    uint64_t temperatureLimit;
+    uint64_t motorSpeed;
+    uint64_t currentLimit;
+    uint64_t accelerationLimit;
+};
+
 uint16_t s_x;
 uint16_t s_y;
 uint16_t width;

@@ -44,6 +44,10 @@ extern bool shouldDrawDataOnGraph;
 // Keep track of which settings page we're on
 int settingsPageIdentifier = temperature;
 
+// EEPROM settings
+struct E2PROM_SETTINGS e2prom_write_settings = {50, 50, 50, 50}; /* Write struct */
+struct E2PROM_SETTINGS e2prom_read_settings =  {0, 0, 0, 0}; /* Read struct */
+
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
 Canvas(g_sMenuTypePage, WIDGET_ROOT, 0, 0,
@@ -432,6 +436,17 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
         return;
     }
 
+    // Draw current value
+    static char currentValue[30];
+    sprintf(currentValue, "%d", lastSample);
+    GrContextBackgroundSet(&sContext, 0x00595D69);
+    GrContextForegroundSet(&sContext, ClrWhite);
+    GrContextFontSet(&sContext, g_psFontCmss18b);
+    GrStringDrawCentered(&sContext, "Current Value:", -1, 240, 15, true);
+    GrStringDrawCentered(&sContext, "", 30, 240, 35, true); // draw a big blank line to remove overlap
+    GrStringDrawCentered(&sContext, currentValue, -1, 240, 35, true);
+    GrFlush(&sContext);
+
     // Calculate y and x scale
     float yscale = (float)height/(float)(yMax - yMin);
     float xscale = (float)width/(float)MAX_PLOT_SAMPLES;
@@ -450,6 +465,7 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
     if (y2 > s_y + height) y2 = s_y + height - 1;
     GrLineDraw(&sContext, x1, y1, x2, y2);
     GrFlush(&sContext);
+
 
     // Increase the number of points plotted count
     pointsCount +=1;

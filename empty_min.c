@@ -59,7 +59,6 @@ bool shouldDrawDataOnGraph = false;
 
 extern void TouchScreenIntHandler(void);
 
-
 // Gets the current date and time
 static char * getCurrentDateTime()
 {
@@ -135,19 +134,9 @@ bool setupGUI(uint32_t ui32SysClock) {
     clkParams.period = 1000;
     clkParams.startFlag = TRUE;
     Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn,
-                        1000, &clkParams);
+                        1, &clkParams);
     clkHandle = Clock_handle(&clk0Struct);
     Clock_start(clkHandle);
-
-    //Clock_Params clkParamsGUI;
-    //Clock_Params_init(&clkParamsGUI);
-    //clkParamsGUI.period = 1000;
-    //clkParamsGUI.startFlag = FALSE;
-    //Error_Block eb;
-    //Clock_Handle clockRTOS = Clock_create((Clock_FuncPtr)DrawDateTime,
-    //                                      1000, &clkParamsGUI, &eb);
-    //Clock_construct(&clk0Struct, (Clock_FuncPtr)clk0Fxn,
-    //                    5, &clkParams);
     return 1;
 }
 
