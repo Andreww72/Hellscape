@@ -256,18 +256,22 @@ bool initAcceleration(uint8_t threshold) {
 ///////////**************??????????????
 
 
-// Variables for the ring buffer
-uint8_t _light_head = 0;
-uint8_t _light_tail = 0;
+
+
 // Read and filter light over I2C
 void swiLight(UArg arg) {
     // On sensor booster pack
     // Copy what we did in lab 4 ish
 
-    uint16_t data;
-    if (!sensorOpt3001Read(&data)) return;
+    // Variables for the ring buffer (not quite a ring buffer though)
+    static uint8_t light_head = 0;
 
-    lightBuffer[_light_head++] = data;
+    uint16_t data;
+    if (!sensorOpt3001Read(&data))
+        return; // If read is not successful, do nothing
+
+    lightBuffer[light_head++] = data;
+    light_head %= windowLight;
 }
 
 // Read and filter motor temperature sensors over UART
@@ -370,9 +374,19 @@ void callbackAccelerometer(UArg arg) {
 //              Getters              //
 ///////////**************??????????????
 
-uint8_t getLight() {
-    // Lux must be converted from the raw values as uint16_t is cheaper to store -> window of at least 5
-    return light;
+float getLight() {
+    // Lux must be converted from the raw values as uint16_t is cheaper to store
+
+    float sum = 0;
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i<windowLight; i++){
+        float converted;
+        sensorOpt3001Convert(lightBuffer[i], &converted);
+        sum += converted;
+    }
+
+    return sum/windowLight;
 }
 
 uint8_t getBoardTemp() {
