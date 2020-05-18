@@ -87,14 +87,41 @@ bool initLight() {
     clkParams.period = 500;
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
-    // TODO Setup I2C connection to OPT3001
 
-    // TODO Setup light OPT3001 on board
+    // I have just used the configuration for lab4b
+    uint16_t config;
+    readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&config);
 
-    System_printf("Light setup\n");
-    System_flush();
+    // Pin4 -> latch
+    config |= (1<<4+8);
 
-    return true;
+    // Pin3 -> polarity
+    config &= ~(1<<3+8);
+
+    writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&config);
+
+    uint16_t limit;
+    readI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&limit);
+
+    // For this one, set bits [15:12] to zero (Table 12)
+    limit &= ~(1<<7 | 1<<6 | 1<<5 | 1<<4);
+    writeI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&limit);
+
+    // Set the high limit register to 2000-3000
+    limit = 0b0010010010001001; // Don't think this is right
+    bool status = writeI2C(OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&limit);
+
+    status &= sensorOpt3001Test();
+
+
+    // TODO: setup the swi, because I definitely remember how to do that bit
+
+    //uint8_t success = 1;
+    if (status) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // TEMPERATURE SETUP
@@ -228,11 +255,19 @@ bool initAcceleration(uint8_t threshold) {
 // Implementations of SWI functions  //
 ///////////**************??????????????
 
+
+// Variables for the ring buffer
+uint8_t _light_head = 0;
+uint8_t _light_tail = 0;
 // Read and filter light over I2C
 void swiLight(UArg arg) {
     // On sensor booster pack
-    // Copy what we did in lab 4
-    light = 100;
+    // Copy what we did in lab 4 ish
+
+    uint16_t data;
+    if (!sensorOpt3001Read(&data)) return;
+
+    lighBuffer[_light_head++] = data;
 }
 
 // Read and filter motor temperature sensors over UART
@@ -266,7 +301,7 @@ void swiMotorTemp(UArg arg) {
 
     // Calculate temperature from binary result
     // Bits 15-2 contain temperature result. Bits 1-0 can be ignored
-    // Example: 00 1100 1000 0000 = C80h = 3200 × (TMP_RESOLUTION / LSB)
+    // Example: 00 1100 1000 0000 = C80h = 3200 ï¿½ (TMP_RESOLUTION / LSB)
     // Convert the 14-bit, left-justified, binary temperature to decimal
     uint16_t result = ((response[0] << 8) | (response[1] & 0xff)) >> 2;
 
@@ -336,6 +371,7 @@ void callbackAccelerometer(UArg arg) {
 ///////////**************??????????????
 
 uint8_t getLight() {
+    // Lux must be converted from the raw values as uint16_t is cheaper to store
     return light;
 }
 
