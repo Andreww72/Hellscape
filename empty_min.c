@@ -53,8 +53,13 @@ Char taskStack[TASKSTACKSIZE];
 Char taskStack2[TASKSTACKSIZE];
 tContext sContext;
 
-extern void TouchScreenIntHandler(void);
+Clock_Struct clk0Struct;
+Clock_Handle clkHandle;
 
+bool shouldDrawDateTime = true;
+bool shouldDrawDataOnGraph = false;
+
+extern void TouchScreenIntHandler(void);
 
 // Gets the current date and time
 static char * getCurrentDateTime() {
@@ -71,14 +76,23 @@ static char * getCurrentDateTime() {
     return t;
 }
 
-// Draws the date, time and lux sensor results to the title bar
-void DrawDateTime() {
-    GrContextBackgroundSet(&sContext, 0x00595D69);
-    GrContextForegroundSet(&sContext, ClrWhite);
-    GrContextFontSet(&sContext, g_psFontCmss18b);
-    GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
-    GrFlush(&sContext);
 
+Void ClockFxn(UArg arg0) {
+    shouldDrawDateTime = true;
+    shouldDrawDataOnGraph = true;
+}
+
+// Draws the date, time
+void DrawDateTime()
+{
+    if (shouldDrawDateTime) {
+        GrContextBackgroundSet(&sContext, 0x00595D69);
+        GrContextForegroundSet(&sContext, ClrWhite);
+        GrContextFontSet(&sContext, g_psFontCmss18b);
+        GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
+        GrFlush(&sContext);
+        shouldDrawDateTime = false;
+    }
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
@@ -116,12 +130,14 @@ bool setupGUI(uint32_t ui32SysClock) {
         return 0;
     }
 
-    Clock_Params clkParamsGUI;
-    Clock_Params_init(&clkParamsGUI);
-    clkParamsGUI.period = 5000;
-    clkParamsGUI.startFlag = TRUE;
-    taskParams.priority = 15; // Why is this here?
-
+    Clock_Params clkParams;
+    Clock_Params_init(&clkParams);
+    clkParams.period = 1000;
+    clkParams.startFlag = TRUE;
+    Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn,
+                        1, &clkParams);
+    clkHandle = Clock_handle(&clk0Struct);
+    Clock_start(clkHandle);
     return 1;
 }
 

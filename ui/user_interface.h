@@ -27,6 +27,19 @@ enum page {
     acceleration = 3,
 };
 
+struct E2PROM_SETTINGS
+{
+    uint64_t temperatureLimit;
+    uint64_t motorSpeed;
+    uint64_t currentLimit;
+    uint64_t accelerationLimit;
+};
+
+uint16_t s_x;
+uint16_t s_y;
+uint16_t width;
+uint16_t height;
+
 static char * getCurrentDateTime();
 void DrawDateTime();
 static void DrawHomeScreen();
@@ -44,8 +57,9 @@ static void decreaseSetting();
 
 static void StartStopMotor();
 
-static void SetupGraphScreen(char * title, int yMin, int yMax);
-static void DrawDataOnGraph(int yMin, int yMax);
+
+static void setupGraphScreen();
+static void DrawDataOnGraph(int yMin, int yMax, uint16_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();
 static void drawAmbientTemperatureGraph();
