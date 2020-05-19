@@ -22,8 +22,8 @@
 #define POWER_VAL_HIGH 100
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 100
-#define SPEED_VAL_LOW 0
-#define SPEED_VAL_HIGH 100
+#define SPEED_VAL_LOW 600
+#define SPEED_VAL_HIGH 12000
 #define ACCELERATION_VAL_LOW 0
 #define ACCELERATION_VAL_HIGH 100
 #define MOTOR_TEMP_VAL_LOW 0
@@ -301,6 +301,7 @@ static void doChangeToSetting(int amount) {
         case motor:
             motorSpeedLimit += amount;
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
+            setSpeed(motorSpeedLimit);
             break;
         case current:
             motorCurrentLimit += amount;
@@ -328,7 +329,7 @@ static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
         motorState = 1;
-        startMotor(25);
+        startMotor(motorSpeedLimit);
     } else {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Start Motor");
         motorState = 0;
@@ -481,7 +482,7 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
 void initSettingValues() {
     // Settings
     motorTemperatureLimit = 50;
-    motorSpeedLimit = 50;
+    motorSpeedLimit = 1000;
     motorCurrentLimit = 50;
     motorAccelerationLimit = 50;
 

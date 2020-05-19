@@ -41,11 +41,16 @@ void eStopMotor();
 void stopMotor_api();
 
 /**
+ * Set the desired speed of the motor in rpm.
+ */
+void setDesiredSpeed(int rpm);
+
+/**
  * Set speed of the motor in rpm
  *
  * returns 1 for success or 0 for failure
  */
-int setSpeed(int speed_rpm);
+void setSpeed(int speed_rpm);
 
 
 
