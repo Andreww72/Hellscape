@@ -10,30 +10,47 @@
 #define PWM 50.0
 #define MAX_DUTY_MS (PWM / 2.0)
 #define SYSTICK_PERIOD_MIN (10.0 / 60000.0)
+#define BUFFER_SIZE 10
+#define Kp 1.0
+#define Ki 1.0
 
 GateHwi_Handle gateHwi;
 GateHwi_Params gHwiprms;
 
 float rotations = 0;
 float speed_rpm = 0;
-float cum_speed_error = 0;
-//int executed = 0;
+int cum_speed_error = 0;
+int executed = 0;
+int rpm_buffer[BUFFER_SIZE];
+int rpm_index = 0;
 
 void checkSpeed() {
-//    executed++;
-//    if (executed == 1000) {
-//        UInt key;
-//        key = GateHwi_enter(gateHwi);
-//        System_printf("%f\n", speed_rpm);
-//        GateHwi_leave(gateHwi, key);
-//        System_flush();
-//        executed = 0;
-//    }
+    executed++;
+    if (executed == 300) {
+        System_printf("%f\n", speed_rpm);
+        System_flush();
+        executed = 0;
+    }
     UInt key;
     key = GateHwi_enter(gateHwi);
-    speed_rpm = rotations / SYSTICK_PERIOD_MIN;
-    rotations = 0;
-//    System_printf("%f\n", speed_rpm);
+
+    // Add this measurement to buffer
+    rpm_buffer[rpm_index] = rotations / SYSTICK_PERIOD_MIN;
+
+    rotations = 0; // reset rotations
+    rpm_index++; // increment index
+    if (rpm_index >= BUFFER_SIZE) { // Reset index counter as necessary
+        rpm_index = 0;
+    }
+
+    // Calculate speed for this tick
+    int i;
+    int tot_speed = 0;
+    for (i = 0; i < BUFFER_SIZE; i++) {
+        tot_speed += rpm_buffer[i];
+    }
+    speed_rpm = tot_speed / BUFFER_SIZE;
+
     GateHwi_leave(gateHwi, key);
 }
 
@@ -48,7 +65,6 @@ void rotationCallbackFxn(unsigned int index) {
     key = GateHwi_enter(gateHwi);
     rotations += 1.0 / 6.0;
     GateHwi_leave(gateHwi, key);
-//    System_printf("%d%d%d-%d\n", GPIO_read(Board_HALLA), GPIO_read(Board_HALLB), GPIO_read(Board_HALLC), index);
     motorUpdateFunc();
 }
 
@@ -84,13 +100,18 @@ bool initMotor() {
         System_flush();
     }
 
+    // initialise the speed buffer
+    int i;
+    for (i = 0; i < BUFFER_SIZE; i++) {
+        rpm_buffer[i] = 0;
+    }
+
     return return_val;
 }
 
 void startMotor(int rpm) {
-//  int return_val;
     enableMotor();
-    setSpeed(40);
+    setSpeed(rpm);
     motorUpdateFunc();
 }
 
@@ -103,9 +124,7 @@ void stopMotor_api() {
     disableMotor();
 }
 
-int setSpeed(int rpm) {
-//    float duty_ms = duty_pct * 100.0 / PWM;
-    float duty_ms = 4;
-    setDuty(duty_ms);
+int setSpeed(int rpm_in) {
+    setDuty(25);
     return 0;
 }
