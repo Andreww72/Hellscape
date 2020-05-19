@@ -8,13 +8,13 @@
 #include "sensor_api.h"
 
 // Current sensor constants
-#define ADC_SEQ 0
+#define ADC_SEQB 0
+#define ADC_SEQC 1
 #define ADC_PRI 0
 #define ADC_STEP 0
 #define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define ADC_RESISTANCE 2500.0 // Page 1861 says 2500 ohms for Radc
+#define ADC_GAIN_BY_RESISTANCE 0.007 // Page 1861 says 2500 ohms for Radc
 #define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
-#define ADC_V_NEUTRAL ADC_V_REF / 2.0 // Centralise reading
 
 #define TMP_RESOLUTION 0.015625
 
@@ -180,22 +180,21 @@ bool initMotorTemp() {
 bool initCurrent() {
     // Current sensors B and C on ADCs, A is not and thus not done.
     // Note GPIO ports already setup in EK file
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
 
     // Current sensor B on D7 with ADC channel 4
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
     GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
-    ADCSequenceConfigure(ADC0_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, ADC_PRI);
-    ADCSequenceStepConfigure(ADC0_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceEnable(ADC0_BASE, ADC_SEQ);
-    ADCIntClear(ADC0_BASE, ADC_SEQ);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQB, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQB, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQB);
+    ADCIntClear(ADC1_BASE, ADC_SEQB);
 
     // Current sensor C on E3 with ADC channel 3
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
-    ADCSequenceConfigure(ADC1_BASE, ADC_SEQ, ADC_TRIGGER_PROCESSOR, ADC_PRI);
-    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQ, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
-    ADCSequenceEnable(ADC1_BASE, ADC_SEQ);
-    ADCIntClear(ADC1_BASE, ADC_SEQ);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQC, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
+    ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
@@ -282,38 +281,38 @@ void swiCurrent(UArg arg) {
     float V_OutB = 0;
 
     // Trigger the ADC conversion.
-    ADCProcessorTrigger(ADC0_BASE, ADC_SEQ);
-    ADCProcessorTrigger(ADC1_BASE, ADC_SEQ);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQB);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQC);
 
     // Wait for conversion to be completed.
-    while(!ADCIntStatus(ADC0_BASE, ADC_SEQ, false));
-    while(!ADCIntStatus(ADC1_BASE, ADC_SEQ, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQB, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQC, false));
 
     // Clear ADC Interrupt
-    ADCIntClear(ADC0_BASE, ADC_SEQ);
-    ADCIntClear(ADC1_BASE, ADC_SEQ);
+    ADCIntClear(ADC1_BASE, ADC_SEQB);
+    ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     // Read ADC Value.
-    ADCSequenceDataGet(ADC0_BASE, ADC_SEQ, ADC0ValueB);
-    ADCSequenceDataGet(ADC1_BASE, ADC_SEQ, ADC1ValueC);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQB, ADC0ValueB);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQC, ADC1ValueC);
 
     // CONVERT TO DIGITAL THAN CURRENT
     // https://www.ti.com/lit/ds/symlink/tm4c1294ncpdt.pdf
     // Page 1861 section contains relevant information for constants
 
     // https://learn.sparkfun.com/tutorials/analog-to-digital-conversion/relating-adc-value-to-voltage
-    // ADC resolution / system voltage = ADC reading / analogue voltage
     // Analogue voltage = ADC reading * system voltage / ADC resolution
+    // Current = (Vref/2 - Vsox) / Gcsa x Rsense
 
     // Convert digital value
-    V_OutA = ((ADC0ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
+    V_OutB = ((ADC0ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorB = (V_OutA - ADC_V_NEUTRAL) / ADC_RESISTANCE;
+    currentSensorB = (ADC_V_REF/2 - V_OutB) / ADC_GAIN_BY_RESISTANCE;
 
     // Convert digital value
-    V_OutB = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
+    V_OutC = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorC = (V_OutB - ADC_V_NEUTRAL) / ADC_RESISTANCE;
+    currentSensorC = (ADC_V_REF/2 - V_OutC) / ADC_GAIN_BY_RESISTANCE;
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
