@@ -20,12 +20,21 @@
 #include <ti/drivers/UART.h>
 #include "motor/motor_api.h"
 
+// All the port macros are defined here
+#include "sensor_ports.h"
+
+
+#include "opt3001/opt3001.h"
+#include "opt3001/i2cOptDriver.h"
+
+
+
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
 bool initSensors(uint8_t accel_threshold);
 
 // Read and filter light over I2C
-uint8_t getLight();
+float getLight();
 
 // Read and filter board and motor temperature sensors over UART
 uint8_t getBoardTemp();
