@@ -13,10 +13,10 @@
 #include "grlib/grlib.h"
 #include "drivers/Kentec320x240x16_ssd2119_spi.h"
 
-int motorTemperatureLimit;
-int motorSpeedLimit;
-int motorCurrentLimit;
-int motorAccelerationLimit;
+uint32_t motorTemperatureLimit;
+uint32_t motorSpeedLimit;
+uint32_t motorCurrentLimit;
+uint32_t motorAccelerationLimit;
 
 uint16_t drawingGraph;
 
@@ -27,18 +27,13 @@ enum page {
     acceleration = 3,
 };
 
-struct E2PROM_SETTINGS
-{
-    uint64_t temperatureLimit;
-    uint64_t motorSpeed;
-    uint64_t currentLimit;
-    uint64_t accelerationLimit;
-};
-
 uint16_t s_x;
 uint16_t s_y;
 uint16_t width;
 uint16_t height;
+
+// EEPROM
+void writeToEEPROM();
 
 static char * getCurrentDateTime();
 void DrawDateTime();

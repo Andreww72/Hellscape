@@ -15,6 +15,8 @@
 #include <string.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <xdc/runtime/System.h>
+#include "driverlib/eeprom.h"
+#include "driverlib/sysctl.h"
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
@@ -29,6 +31,10 @@
 #define MOTOR_TEMP_VAL_HIGH 100
 #define LIGHT_VAL_LOW 0
 #define LIGHT_VAL_HIGH 100
+
+// EEPROM
+#define E2PROM_ADRES 0x0000
+#define EEPROM_EMPTY 0xFFFFFFFF
 
 // Graph bounds
 #define X_GRAPH 20
@@ -45,8 +51,8 @@ extern bool shouldDrawDataOnGraph;
 int settingsPageIdentifier = temperature;
 
 // EEPROM settings
-struct E2PROM_SETTINGS e2prom_write_settings = {50, 50, 50, 50}; /* Write struct */
-struct E2PROM_SETTINGS e2prom_read_settings =  {0, 0, 0, 0}; /* Read struct */
+uint32_t e2prom_write_settings[4] = {50, 50, 50, 50}; /* Write struct */
+uint32_t e2prom_read_settings[4] =  {0, 0, 0, 0}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -295,18 +301,26 @@ static void doChangeToSetting(int amount) {
     switch (settingsPageIdentifier) {
         case temperature:
             motorTemperatureLimit += amount;
+            e2prom_write_settings[0] = motorTemperatureLimit;
+            writeToEEPROM();
             DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
             break;
         case motor:
             motorSpeedLimit += amount;
+            e2prom_write_settings[1] = motorSpeedLimit;
+            writeToEEPROM();
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
             break;
         case current:
             motorCurrentLimit += amount;
+            e2prom_write_settings[2] = motorCurrentLimit;
+            writeToEEPROM();
             DrawSettingsParameters("Current Limit", "Amps", motorCurrentLimit);
             break;
         case acceleration:
             motorAccelerationLimit += amount;
+            e2prom_write_settings[3] = motorAccelerationLimit;
+            writeToEEPROM();
             DrawSettingsParameters("Acceleration Limit", "m/s^2", motorAccelerationLimit);
             break;
         default:
@@ -477,10 +491,10 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
 
 void initSettingValues() {
     // Settings
-    motorTemperatureLimit = 50;
-    motorSpeedLimit = 50;
-    motorCurrentLimit = 50;
-    motorAccelerationLimit = 50;
+    motorTemperatureLimit = e2prom_read_settings[0];
+    motorSpeedLimit = e2prom_read_settings[1];
+    motorCurrentLimit = e2prom_read_settings[2];
+    motorAccelerationLimit = e2prom_read_settings[3];
 
     // Initially not drawing a graph
     drawingGraph = 0;
@@ -492,8 +506,34 @@ void initSettingValues() {
     height = HEIGHT_GRAPH - 2;
 }
 
+void writeToEEPROM(uint32_t settings[4]) {
+    EEPROMProgram((uint32_t *)&e2prom_write_settings, E2PROM_ADRES, sizeof(e2prom_write_settings));
+}
+
+void setupEEPROM() {
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_EEPROM0); // EEPROM activate
+    EEPROMInit(); // EEPROM start
+
+    // Clear EEPROM
+    //EEPROMMassErase();
+
+    // Read the settings
+    EEPROMRead((uint32_t *)&e2prom_read_settings, E2PROM_ADRES, sizeof(e2prom_read_settings));
+
+    // If nothing in EEPROM, set to default
+    if (e2prom_read_settings[0] == EEPROM_EMPTY) {
+        EEPROMProgram((uint32_t *)&e2prom_write_settings, E2PROM_ADRES, sizeof(e2prom_write_settings)); //Write struct to EEPROM start from 0x0000
+    }
+
+    // Read the settings again after they've been set to default
+    EEPROMRead((uint32_t *)&e2prom_read_settings, E2PROM_ADRES, sizeof(e2prom_read_settings));
+}
+
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext)
 {
+    // EEPROM setup
+    setupEEPROM();
+
     // Init setting values
     initSettingValues();
 
