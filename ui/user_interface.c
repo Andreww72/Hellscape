@@ -43,12 +43,13 @@
 #define HEIGHT_GRAPH 140
 #define MAX_PLOT_SAMPLES 20
 
+// Graph min and max
+uint32_t minGraph;
+uint32_t maxGraph;
+
 // Get sContext for empty_min.c externally
 extern tContext sContext;
 extern bool shouldDrawDataOnGraph;
-
-// Keep track of which settings page we're on
-int settingsPageIdentifier = temperature;
 
 // EEPROM settings
 uint32_t e2prom_write_settings[4] = {50, 50, 50, 50}; /* Write struct */
@@ -350,31 +351,37 @@ static void StartStopMotor() {
 
 static void drawPowerGraph()
 {
+    graphPageIdentifier = powerGraph;
     setupGraphScreen("Power Graph (Watts)", POWER_VAL_LOW, POWER_VAL_HIGH);
 }
 
 static void drawAmbientTemperatureGraph()
 {
+    graphPageIdentifier = ambTempGraph;
     setupGraphScreen("Ambient Temp (Celcius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
 }
 
 static void drawSpeedGraph()
 {
+    graphPageIdentifier = speedGraph;
     setupGraphScreen("Speed (RPM)", SPEED_VAL_LOW, SPEED_VAL_HIGH);
 }
 
 static void drawAccelerationGraph()
 {
+    graphPageIdentifier = accelerationGraph;
     setupGraphScreen("Acceleration (m/s^2)", ACCELERATION_VAL_LOW, ACCELERATION_VAL_HIGH);
 }
 
 static void drawMotorTemperatureGraph()
 {
+    graphPageIdentifier = motorTempGraph;
     setupGraphScreen("Motor Temp (Celcius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
 }
 
 static void drawLightGraph()
 {
+    graphPageIdentifier = lightGraph;
     setupGraphScreen("Light (Lux)", LIGHT_VAL_LOW, LIGHT_VAL_HIGH);
 }
 
@@ -383,6 +390,10 @@ char lowLimit[5];
 char highLimit[5];
 static void setupGraphScreen(char * title, int yMin, int yMax)
 {
+    // Set graph bounds
+    minGraph = yMin;
+    maxGraph = yMax;
+
     sprintf(lowLimit, "%d", yMin);
     sprintf(highLimit, "%d", yMax);
     // Remove and paint
@@ -406,20 +417,9 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
     drawingGraph = 1;
-    while (drawingGraph) {
-        // Simulate a delay
-        //int busy;
-        //for (busy = 0; busy < 500000; busy++) {
-        //    busy*busy*busy*busy;
-        //}
-
-        // Draw data on the graph
-        if (shouldDrawDataOnGraph) {
-            DrawDataOnGraph(yMin, yMax, rand() % 100);
-            shouldDrawDataOnGraph = false;
-        }
-        WidgetMessageQueueProcess();
-    }
+    DrawDataOnGraph(50);
+    DrawDataOnGraph(50);
+    // DrawDataOnGraph(yMin, yMax, rand() % 100);
 }
 
 // Graphs the chosen data on the map and scales accordingly
@@ -440,7 +440,7 @@ float float_rand( float min, float max )
     return min + scale * ( max - min );      /* [min, max] */
 }
 
-static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
+static void DrawDataOnGraph(uint32_t lastSample)
 {
     if (pointsCount == MAX_PLOT_SAMPLES){
         // Reset graph
@@ -462,7 +462,7 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
     GrFlush(&sContext);
 
     // Calculate y and x scale
-    float yscale = (float)height/(float)(yMax - yMin);
+    float yscale = (float)height/(float)(maxGraph - minGraph);
     float xscale = (float)width/(float)MAX_PLOT_SAMPLES;
 
     // Declare line coordinates
@@ -470,9 +470,9 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
 
     // Draw onto graph
     x1 = (pointsCount * xscale) + s_x;
-    y1 = ((s_y + height) - (previousSample - yMin) * yscale);
+    y1 = ((s_y + height) - (previousSample - minGraph) * yscale);
     x2 = ((pointsCount + 1) * xscale)+s_x;
-    y2 = ((s_y + height) - (lastSample - yMin) * yscale);
+    y2 = ((s_y + height) - (lastSample - minGraph) * yscale);
     if (y1 < s_y) y1 = s_y + 1;
     if (y1 > s_y + height) y1 = s_y + height - 1;
     if (y2 < s_y) y2 = s_y + 1;
@@ -490,6 +490,10 @@ static void DrawDataOnGraph(int yMin, int yMax, uint16_t lastSample)
 }
 
 void initSettingValues() {
+    // Init page state
+    settingsPageIdentifier = temperature;
+    graphPageIdentifier = powerGraph;
+
     // Settings
     motorTemperatureLimit = e2prom_read_settings[0];
     motorSpeedLimit = e2prom_read_settings[1];

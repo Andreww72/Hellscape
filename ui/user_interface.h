@@ -27,6 +27,19 @@ enum page {
     acceleration = 3,
 };
 
+enum graphPage {
+    powerGraph = 0,
+    ambTempGraph = 1,
+    speedGraph = 2,
+    accelerationGraph = 3,
+    motorTempGraph = 4,
+    lightGraph = 5
+};
+
+// Keep track of which page we're on
+int settingsPageIdentifier;
+int graphPageIdentifier;
+
 uint16_t s_x;
 uint16_t s_y;
 uint16_t width;
@@ -53,7 +66,7 @@ static void decreaseSetting();
 static void StartStopMotor();
 
 static void setupGraphScreen();
-static void DrawDataOnGraph(int yMin, int yMax, uint16_t last_sample);
+static void DrawDataOnGraph(uint32_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();
 static void drawAmbientTemperatureGraph();
