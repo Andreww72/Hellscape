@@ -56,6 +56,7 @@ Clock_Handle clkHandle;
 
 bool shouldDrawDateTime = true;
 bool shouldDrawDataOnGraph = false;
+extern uint16_t drawingGraph;
 
 extern void TouchScreenIntHandler(void);
 
@@ -84,7 +85,7 @@ Void ClockFxn(UArg arg0) {
 // Draws the date, time
 void DrawDateTime()
 {
-    if (shouldDrawDateTime) {
+    if (shouldDrawDateTime && !drawingGraph) {
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
         shouldDrawDateTime = false;
