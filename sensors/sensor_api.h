@@ -22,16 +22,12 @@
 
 // All the port macros are defined here
 #include "sensor_ports.h"
-
-
 #include "opt3001/opt3001.h"
 #include "opt3001/i2cOptDriver.h"
 
-
-
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
-bool initSensors(uint8_t accel_threshold);
+bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
 
 // Read and filter light over I2C
 float getLight();
@@ -48,5 +44,10 @@ float getCurrentTotal();
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
 uint8_t getAcceleration();
+
+// Update threshold values that trigger an eStop
+void setThresholdTemp(uint16_t threshTemp);
+void setThresholdCurrent(uint16_t threshCurrent);
+void setThresholdAccel(uint16_t threshAccel);
 
 #endif /* SENSORS_SENSOR_API_H_ */

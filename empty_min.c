@@ -100,7 +100,7 @@ void userInterfaceFxn(UArg arg0, UArg arg1) {
 
     while(1) {
         UserInterfaceDraw(&sContext);
-        DrawDateTime();
+        //DrawDateTime();
     }
 }
 
@@ -159,7 +159,7 @@ int main(void) {
         System_flush();
         while (1) {} // stop here if it dies
     }
-    if (!initSensors(1)) {
+    if (!initSensors(40, 1000, 1)) {
         System_printf("Sensor initialisation failed\n");
         System_flush();
         while (1) {} // stop here if it dies

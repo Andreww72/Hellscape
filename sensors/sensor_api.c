@@ -13,7 +13,8 @@
 #define ADC_PRI 0
 #define ADC_STEP 0
 #define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define ADC_GAIN_BY_RESISTANCE 0.007 // Page 1861 says 2500 ohms for Radc
+#define ADC_RESISTANCE 0.07 // FAQ
+#define ADC_GAIN 10.0 // FAQ
 #define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
 
 #define TMP_RESOLUTION 0.015625
@@ -40,6 +41,11 @@ float currentSensorB = 0;
 float currentSensorC = 0;
 uint8_t acceleration = 0;
 
+// Thresholds that trigger eStop
+uint16_t thresholdTemp = 40;
+uint16_t thresholdCurrent = 1000;
+uint16_t thresholdAccel = 1;
+
 // Setup handles
 UART_Handle uartBoard;
 UART_Handle uartMotor;
@@ -52,9 +58,9 @@ Clock_Struct clockAccelerationStruct;
 // Function prototypes that are not in the .h (deliberately)
 bool initLight();
 bool initBoardTemp();
-bool initMotorTemp();
-bool initCurrent();
-bool initAcceleration(uint8_t threshold);
+bool initMotorTemp(uint16_t threshTemp);
+bool initCurrent(uint16_t threshCurrent);
+bool initAcceleration(uint16_t threshAccel);
 void swiLight(UArg arg);
 void swiBoardTemp(UArg arg);
 void swiMotorTemp(UArg arg);
@@ -64,7 +70,7 @@ void swiAcceleration(UArg arg);
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool initSensors(uint8_t accel_threshold){
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
@@ -73,9 +79,9 @@ bool initSensors(uint8_t accel_threshold){
     return
             initLight() &&
             initBoardTemp() &&
-            initMotorTemp() &&
-            initCurrent() &&
-            initAcceleration(accel_threshold);
+            initMotorTemp(threshTemp) &&
+            initCurrent(threshCurrent) &&
+            initAcceleration(threshAccel);
 }
 
 ///////////**************??????????????
@@ -147,10 +153,12 @@ bool initBoardTemp() {
     return true;
 }
 
-bool initMotorTemp() {
+bool initMotorTemp(uint16_t threshTemp) {
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
+
+    setThresholdTemp(threshTemp);
 
     UART_Params uartParams;
     UART_Params_init(&uartParams);
@@ -158,8 +166,8 @@ bool initMotorTemp() {
 
     // Setup UART connection for motor TMP107
     // UART7 and GPIO setup statically in EK file
-    // TMP107_TX on PC4 with UART RX7
-    // TMP107_RX on PC5 with UART TX7
+    // TMP107_RX on PC4 with UART RX7
+    // TMP107_TX on PC5 with UART TX7
     uartMotor = UART_open(Board_UART7, &uartParams);
     if (uartMotor == NULL) {
          System_abort("Error opening the UART");
@@ -190,10 +198,15 @@ bool initMotorTemp() {
     setTMP[3] = configRegWord1;
     setTMP[4] = configRegWord2;
 
+    // TODO Make tmp107 throw an interrupt (which throws estop) if threshold exceeded
+
     // Write setup data to TMP107
     int writeInit = UART_write(uartMotor, &initTMP, 3);
+    // Might need a read here
+
     int writeSet = UART_write(uartMotor, &setTMP, 3);
-    //Read device ok response
+    // Read device ok response
+    // Investigate 7ms delay thing
     int readResp = UART_read(uartMotor, &response, 1);
 
     System_printf("Temperature setup\n");
@@ -204,7 +217,9 @@ bool initMotorTemp() {
 }
 
 // CURRENT SETUP
-bool initCurrent() {
+bool initCurrent(uint16_t thresholdCurrent) {
+    setThresholdCurrent(thresholdCurrent);
+
     // Current sensors B and C on ADCs, A is not and thus not done.
     // Note GPIO ports already setup in EK file
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
@@ -226,6 +241,8 @@ bool initCurrent() {
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
 
+    // TODO Throw an interrupt (which throws estop) if threshold exceeded
+
     System_printf("Current setup\n", currentSensorC);
     System_flush();
 
@@ -235,7 +252,9 @@ bool initCurrent() {
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-bool initAcceleration(uint8_t threshold) {
+bool initAcceleration(uint16_t thresholdAccel) {
+    setThresholdAccel(thresholdAccel);
+
     // Create a recurring 200Hz SWI swi_acceleration
     clkParams.period = 5;
     Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkParams);
@@ -314,10 +333,10 @@ void swiMotorTemp(UArg arg) {
 
 // Read and filter two motor phase currents via analogue signals
 void swiCurrent(UArg arg) {
-    uint32_t ADC0ValueB[1], ADC1ValueC[1];
+    uint32_t ADC1ValueB[1], ADC1ValueC[1];
     uint32_t twelve_bitmask = 0xfff;
-    float V_OutA = 0;
     float V_OutB = 0;
+    float V_OutC = 0;
 
     // Trigger the ADC conversion.
     ADCProcessorTrigger(ADC1_BASE, ADC_SEQB);
@@ -332,7 +351,7 @@ void swiCurrent(UArg arg) {
     ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     // Read ADC Value.
-    ADCSequenceDataGet(ADC1_BASE, ADC_SEQB, ADC0ValueB);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQB, ADC1ValueB);
     ADCSequenceDataGet(ADC1_BASE, ADC_SEQC, ADC1ValueC);
 
     // CONVERT TO DIGITAL THAN CURRENT
@@ -344,14 +363,14 @@ void swiCurrent(UArg arg) {
     // Current = (Vref/2 - Vsox) / Gcsa x Rsense
 
     // Convert digital value
-    V_OutB = ((ADC0ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
+    V_OutB = ((ADC1ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorB = (ADC_V_REF/2 - V_OutB) / ADC_GAIN_BY_RESISTANCE;
+    currentSensorB = (ADC_V_REF/2 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
 
     // Convert digital value
     V_OutC = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorC = (ADC_V_REF/2 - V_OutC) / ADC_GAIN_BY_RESISTANCE;
+    currentSensorC = (ADC_V_REF/2 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
@@ -410,4 +429,19 @@ float getCurrentTotal() {
 
 uint8_t getAcceleration() {
     return acceleration;
+}
+
+void setThresholdTemp(uint16_t threshTemp) {
+    thresholdTemp = threshTemp;
+    // TODO Update TMP107 with new limit...
+}
+
+void setThresholdCurrent(uint16_t threshCurrent) {
+    thresholdCurrent = threshCurrent;
+    // TODO Think this will be a manual check every so often
+}
+
+void setThresholdAccel(uint16_t threshAccel) {
+    thresholdAccel = threshAccel;
+    // TODO Update BMI160 with new limit...
 }
