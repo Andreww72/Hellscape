@@ -503,6 +503,11 @@ void UserInterfaceInit(uint32_t systemclock, tContext * sContext)
     // Init Graphics Context
     GrContextInit(sContext, &g_sKentec320x240x16_SSD2119);
 
+    // Fonts and stuff
+    GrContextBackgroundSet(sContext, 0x00595D69);
+    GrContextForegroundSet(sContext, ClrWhite);
+    GrContextFontSet(sContext, g_psFontCmss18b);
+
     // New Main Screen
     WidgetAdd(WIDGET_ROOT, (tWidget *)&g_sMenuTypePage);
     WidgetAdd((tWidget *)&g_sMenuTypePage, (tWidget *)&g_sSetOption);

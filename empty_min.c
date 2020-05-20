@@ -59,12 +59,12 @@ bool shouldDrawDataOnGraph = false;
 
 extern void TouchScreenIntHandler(void);
 
+time_t t1;
 // Gets the current date and time
 static char * getCurrentDateTime()
 {
     static char t[30];
     struct tm * timeinfo;
-    time_t t1 = time (NULL);
     timeinfo = localtime ( &t1 );
     timeinfo->tm_hour += 16;
     if (timeinfo->tm_hour>24){
@@ -78,15 +78,13 @@ static char * getCurrentDateTime()
 Void ClockFxn(UArg arg0) {
     shouldDrawDateTime = true;
     shouldDrawDataOnGraph = true;
+    t1++;
 }
 
 // Draws the date, time
 void DrawDateTime()
 {
     if (shouldDrawDateTime) {
-        GrContextBackgroundSet(&sContext, 0x00595D69);
-        GrContextForegroundSet(&sContext, ClrWhite);
-        GrContextFontSet(&sContext, g_psFontCmss18b);
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
         shouldDrawDateTime = false;
@@ -115,6 +113,15 @@ bool setupGUI(uint32_t ui32SysClock) {
     TouchScreenInit(ui32SysClock);
     TouchScreenCallbackSet(WidgetPointerMessage);
 
+    // Init time
+    t1 = time(NULL);
+    if (t1 < 10000) {
+        System_printf("Time - GET TIME FAILED");
+        System_flush();
+        // Set to a reasonable time
+        t1 = 3798880499;
+    }
+
     /* Init UI task */
     Task_Params taskParams;
     Task_Params_init(&taskParams);
@@ -136,6 +143,11 @@ bool setupGUI(uint32_t ui32SysClock) {
     Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn,
                         1, &clkParams);
     clkHandle = Clock_handle(&clk0Struct);
+    if (clkHandle == NULL) {
+        System_printf("Task - CLOCK SETUP FAILED");
+        System_flush();
+        return 0;
+    }
     Clock_start(clkHandle);
     return 1;
 }
