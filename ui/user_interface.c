@@ -417,8 +417,8 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
     drawingGraph = 1;
-    DrawDataOnGraph(50);
-    DrawDataOnGraph(50);
+    // AddValueToGraph(50, powerGraph);
+    // AddValueToGraph(50, powerGraph);
     // DrawDataOnGraph(yMin, yMax, rand() % 100);
 }
 
@@ -486,7 +486,12 @@ static void DrawDataOnGraph(uint32_t lastSample)
 
     // Change the previous sample
     previousSample = lastSample;
+}
 
+static void AddValueToGraph(uint32_t lastSample, int graphPage) {
+    if (drawingGraph && graphPageIdentifier == graphPage) {
+        DrawDataOnGraph(lastSample);
+    }
 }
 
 void initSettingValues() {
