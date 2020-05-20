@@ -11,14 +11,15 @@
 #define SYSTICK_PER_MIN 6000.0
 #define PHASES_PER_ROTATION 24
 #define BUFFER_SIZE 5
-#define Kp 0.01 // tweak these until PI makes sense
-#define Ki 0.01
+#define Kp 0.02//66//0.0083 // tweak these until PI makes sense
+#define Ki 0.0001
 
 GateHwi_Handle gateHwi;
 GateHwi_Params gHwiprms;
 
 int rotations = 0;
 int speed_rpm = 0;
+int desired_speed_rpm = 0;
 int cum_speed_error = 0;
 int executed = 0;
 int rpm_buffer[BUFFER_SIZE];
@@ -52,8 +53,7 @@ bool initMotor() {
     GPIO_enableInt(Board_HALLB);
     GPIO_enableInt(Board_HALLC);
 
-    // set up a swi for 100kHz
-
+    // check the return value from initMotorLib();
     if (return_val == 0) {
         System_printf("%s\n", eb->msg);
         System_flush();
@@ -70,7 +70,7 @@ bool initMotor() {
 
 void startMotor(int rpm) {
     enableMotor();
-    setSpeed(rpm);
+    setDesiredSpeed(rpm);
     motorUpdateFunc();
 }
 
@@ -83,18 +83,22 @@ void stopMotor_api() {
     disableMotor();
 }
 
-void setSpeed(int rpm_in) {
+void setDesiredSpeed(int rpm) {
+    desired_speed_rpm = rpm;
+}
+
+void setSpeed() {
     int error;
     int duty;
 
     // calculate PWM duty cycle
-    error = rpm_in - speed_rpm;
+    error = desired_speed_rpm - speed_rpm;
     cum_speed_error += error;
 
     duty = Kp*error + Ki*cum_speed_error;
 
-    System_printf("Duty cycle: %d\n", duty);
-    System_flush();
+//    System_printf("Duty cycle: %d\n", duty);
+//    System_flush();
 
     setDuty(duty);
     return;
@@ -134,6 +138,7 @@ void checkSpeed() {
 
 // Function to update the motor commutation
 void motorUpdateFunc() {
+    setSpeed();
     updateMotor(GPIO_read(Board_HALLA),
                 GPIO_read(Board_HALLB),
                 GPIO_read(Board_HALLC));

@@ -299,9 +299,9 @@ static void doChangeToSetting(int amount) {
             DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
             break;
         case motor:
-            motorSpeedLimit += amount;
+            motorSpeedLimit += 100;//amount;
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
-            setSpeed(motorSpeedLimit);
+            setDesiredSpeed(motorSpeedLimit);
             break;
         case current:
             motorCurrentLimit += amount;

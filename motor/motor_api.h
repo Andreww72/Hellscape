@@ -50,7 +50,7 @@ void setDesiredSpeed(int rpm);
  *
  * returns 1 for success or 0 for failure
  */
-void setSpeed(int speed_rpm);
+void setSpeed();
 
 
 
