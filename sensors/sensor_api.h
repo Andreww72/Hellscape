@@ -46,7 +46,7 @@ float getCurrentTotal();
 uint8_t getAcceleration();
 
 // Update threshold values that trigger an eStop
-void setThresholdTemp(uint16_t threshTemp);
+void setThresholdTemp(uint8_t threshTemp);
 void setThresholdCurrent(uint16_t threshCurrent);
 void setThresholdAccel(uint16_t threshAccel);
 

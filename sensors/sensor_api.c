@@ -37,12 +37,12 @@ uint8_t accelerationBuffer[windowAcceleration];
 uint8_t light = 100;
 uint8_t boardTemp = 25;
 uint8_t motorTemp = 25;
-float currentSensorB = 0;
-float currentSensorC = 0;
+uint16_t currentSensorB = 0;
+uint16_t currentSensorC = 0;
 uint8_t acceleration = 0;
 
 // Thresholds that trigger eStop
-uint16_t thresholdTemp = 40;
+uint8_t thresholdTemp = 40;
 uint16_t thresholdCurrent = 1000;
 uint16_t thresholdAccel = 1;
 
@@ -58,7 +58,7 @@ Clock_Struct clockAccelerationStruct;
 // Function prototypes that are not in the .h (deliberately)
 bool initLight();
 bool initBoardTemp();
-bool initMotorTemp(uint16_t threshTemp);
+bool initMotorTemp(uint8_t threshTemp);
 bool initCurrent(uint16_t threshCurrent);
 bool initAcceleration(uint16_t threshAccel);
 void swiLight(UArg arg);
@@ -70,7 +70,7 @@ void swiAcceleration(UArg arg);
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
+bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
@@ -141,19 +141,18 @@ bool initBoardTemp() {
     uartParams.baudRate = 115200;
 
     // TODO Setup UART connection for board TMP107
-    // TODO Figure out the ports and pins then copy what I did for motor temp
     // PROBABLY ISN'T UART0
-    uartBoard = UART_open(Board_UART0, &uartParams);
-    if (uartBoard == NULL) {
-         System_abort("Error opening the UART");
-     }
+//    uartBoard = UART_open(Board_UART0, &uartParams);
+//    if (uartBoard == NULL) {
+//         System_abort("Error opening the UART");
+//     }
 
     // TODO Setup board TMP107 temperature sensor
 
     return true;
 }
 
-bool initMotorTemp(uint16_t threshTemp) {
+bool initMotorTemp(uint8_t threshTemp) {
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
@@ -365,12 +364,14 @@ void swiCurrent(UArg arg) {
     // Convert digital value
     V_OutB = ((ADC1ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorB = (ADC_V_REF/2 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
+    currentSensorB = 1000.0 * (ADC_V_REF/2 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
 
     // Convert digital value
     V_OutC = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
     // I = V / R
-    currentSensorC = (ADC_V_REF/2 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+    currentSensorC = 1000.0 * (ADC_V_REF/2 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+
+    // TODO Occasionally check if current exceeds threshold and if so throw eStop
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
