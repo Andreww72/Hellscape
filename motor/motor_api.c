@@ -11,8 +11,10 @@
 #define SYSTICK_PER_MIN 6000.0
 #define PHASES_PER_ROTATION 24
 #define BUFFER_SIZE 5
-#define Kp 0.02
-#define Ki 0.0001
+#define MIN_RPM 200
+#define MAX_CUM_ERROR 9000
+#define Kp 0.02   // DO NOT TOUCH
+#define Ki 0.0001 // DO NOT TOUCH
 
 GateHwi_Handle gateHwi;
 GateHwi_Params gHwiprms;
@@ -20,14 +22,21 @@ GateHwi_Params gHwiprms;
 int rotations = 0;
 int speed_rpm = 0;
 int desired_speed_rpm = 0;
-int target_speed_rpm = 0;
+int accel_speed = 0;
+int actual_accel_speed = MIN_RPM;
 int cum_speed_error = 0;
 int executed = 0;
 int rpm_buffer[BUFFER_SIZE];
 int rpm_index = 0;
 
+int printed = 0;
+
+bool motor_on = false;
+
+// utility functions
 void motorUpdateFunc();
 void rotationCallbackFxn(unsigned int index);
+void setSpeed();
 
 bool initMotor() {
     int return_val;
@@ -72,6 +81,7 @@ bool initMotor() {
 void startMotor(int rpm) {
     enableMotor();
     setDesiredSpeed(rpm);
+    motor_on = true;
     motorUpdateFunc();
 }
 
@@ -80,13 +90,16 @@ void eStopMotor() {
 }
 
 void stopMotor_api() {
-    speed_rpm = 0;
-    stopMotor(true);
-    disableMotor();
+    setDesiredSpeed(0);
+    motor_on = false;
 }
 
 void setDesiredSpeed(int rpm) {
     desired_speed_rpm = rpm;
+}
+
+int getSpeed() {
+    return speed_rpm;
 }
 
 void setSpeed() {
@@ -94,31 +107,46 @@ void setSpeed() {
     int duty;
 
     // calculate PWM duty cycle
-    error = desired_speed_rpm - speed_rpm;
+    error = actual_accel_speed - speed_rpm;
     cum_speed_error += error;
 
     // Calculate the duty cycle
     duty = Kp*error + Ki*cum_speed_error;
 
+//    System_printf("%d\n", error);
+
     setDuty(duty);
-    return;
 }
 
 // Function to check & filter the speed as per the clock
 void checkSpeed() {
     executed++;
-//    if (executed == 300) {
-//        System_printf("%d\n", speed_rpm);
-//        System_flush();
-//        executed = 0;
-//    }
-
-    if (target_speed_rpm < desired_speed_rpm && executed == 10) {
-        target_speed_rpm += 50;
-    } else if (target_speed_rpm > desired_speed_rpm && executed == 10) {
-        target_speed_rpm -= 50;
+    if (executed == 300) {
+//        System_printf("%d,%d,%d\n", duty,error,cum_speed_error);
+        System_flush();
+        executed = 0;
     }
-
+    // Accelerate/deccelerate
+    if (accel_speed < desired_speed_rpm) {
+        accel_speed += 5;
+        // hack because the motor won't start below 200 rpm
+        //if (accel_speed == 0) {
+        //    actual_accel_speed = 0;
+        /*} else */if (accel_speed <= MIN_RPM) {
+            actual_accel_speed = MIN_RPM;
+        } else {
+            actual_accel_speed += 5;
+        }
+    } else if (accel_speed > desired_speed_rpm) {
+        accel_speed -= 5;
+        //if (accel_speed == 0) {
+        //    actual_accel_speed = 0;
+        /*} else */if (accel_speed <= MIN_RPM) {
+            actual_accel_speed = MIN_RPM;
+        } else {
+            actual_accel_speed -= 5;
+        }
+    }
 
     UInt key;
     key = GateHwi_enter(gateHwi);

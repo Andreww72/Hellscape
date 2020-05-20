@@ -46,11 +46,9 @@ void stopMotor_api();
 void setDesiredSpeed(int rpm);
 
 /**
- * Set speed of the motor in rpm
- *
- * returns 1 for success or 0 for failure
+ * Get the speed of the motor in RPM.
  */
-void setSpeed();
+int getSpeed();
 
 
 
