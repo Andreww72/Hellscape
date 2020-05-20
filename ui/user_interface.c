@@ -299,7 +299,7 @@ static void doChangeToSetting(int amount) {
             DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
             break;
         case motor:
-            motorSpeedLimit += 100;//amount;
+            motorSpeedLimit += amount;//amount;
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
             setDesiredSpeed(motorSpeedLimit);
             break;
@@ -317,11 +317,23 @@ static void doChangeToSetting(int amount) {
 }
 
 static void increaseSetting() {
-    doChangeToSetting(5);
+    switch (settingsPageIdentifier) {
+        case motor:
+            doChangeToSetting(50);
+            break;
+        default:
+            doChangeToSetting(5);
+    }
 }
 
 static void decreaseSetting() {
-    doChangeToSetting(-5);
+    switch (settingsPageIdentifier) {
+        case motor:
+            doChangeToSetting(-50);
+            break;
+        default:
+            doChangeToSetting(-5);
+    }
 }
 
 int motorState = 0;

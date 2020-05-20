@@ -11,7 +11,7 @@
 #define SYSTICK_PER_MIN 6000.0
 #define PHASES_PER_ROTATION 24
 #define BUFFER_SIZE 5
-#define Kp 0.02//66//0.0083 // tweak these until PI makes sense
+#define Kp 0.02
 #define Ki 0.0001
 
 GateHwi_Handle gateHwi;
@@ -20,6 +20,7 @@ GateHwi_Params gHwiprms;
 int rotations = 0;
 int speed_rpm = 0;
 int desired_speed_rpm = 0;
+int target_speed_rpm = 0;
 int cum_speed_error = 0;
 int executed = 0;
 int rpm_buffer[BUFFER_SIZE];
@@ -79,6 +80,7 @@ void eStopMotor() {
 }
 
 void stopMotor_api() {
+    speed_rpm = 0;
     stopMotor(true);
     disableMotor();
 }
@@ -95,10 +97,8 @@ void setSpeed() {
     error = desired_speed_rpm - speed_rpm;
     cum_speed_error += error;
 
+    // Calculate the duty cycle
     duty = Kp*error + Ki*cum_speed_error;
-
-//    System_printf("Duty cycle: %d\n", duty);
-//    System_flush();
 
     setDuty(duty);
     return;
@@ -107,11 +107,18 @@ void setSpeed() {
 // Function to check & filter the speed as per the clock
 void checkSpeed() {
     executed++;
-    if (executed == 300) {
-        System_printf("%d\n", speed_rpm);
-        System_flush();
-        executed = 0;
+//    if (executed == 300) {
+//        System_printf("%d\n", speed_rpm);
+//        System_flush();
+//        executed = 0;
+//    }
+
+    if (target_speed_rpm < desired_speed_rpm && executed == 10) {
+        target_speed_rpm += 50;
+    } else if (target_speed_rpm > desired_speed_rpm && executed == 10) {
+        target_speed_rpm -= 50;
     }
+
 
     UInt key;
     key = GateHwi_enter(gateHwi);
