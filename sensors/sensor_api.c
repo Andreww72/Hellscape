@@ -70,7 +70,7 @@ void swiAcceleration(UArg arg);
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
+bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
@@ -79,9 +79,9 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
     return
             initLight() &&
             initBoardTemp() &&
-            initMotorTemp(threshTemp) &&
-            initCurrent(threshCurrent) &&
-            initAcceleration(threshAccel);
+            initMotorTemp(thresholdTemp) &&
+            initCurrent(thresholdCurrent) &&
+            initAcceleration(thresholdAccel);
 }
 
 ///////////**************??????????????
@@ -432,7 +432,7 @@ uint8_t getAcceleration() {
     return acceleration;
 }
 
-void setThresholdTemp(uint16_t threshTemp) {
+void setThresholdTemp(uint8_t threshTemp) {
     thresholdTemp = threshTemp;
     // TODO Update TMP107 with new limit...
 }

@@ -22,8 +22,12 @@
 
 // All the port macros are defined here
 #include "sensor_ports.h"
+
+// Sensor files
 #include "opt3001/opt3001.h"
 #include "opt3001/i2cOptDriver.h"
+
+#include "bmi160/bmi160.h"
 
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)

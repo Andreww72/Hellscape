@@ -16,11 +16,17 @@
 
 #define OPT3001_I2C_ADDRESS             0x47
 
-/* Register addresses */
+/* Register addresses for opt3001 */
 #define REG_RESULT                      0x00
 #define REG_CONFIGURATION               0x01
 #define REG_LOW_LIMIT                   0x02
 #define REG_HIGH_LIMIT                  0x03
+
+
+
+// BMI160 addresses
+#define BMI160_I2C_ADDRESS              0x68
+
 
 
 
