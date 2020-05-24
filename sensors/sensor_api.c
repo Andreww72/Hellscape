@@ -39,7 +39,7 @@ uint8_t boardTemp = 25;
 uint8_t motorTemp = 25;
 float currentSensorB = 0;
 float currentSensorC = 0;
-uint8_t acceleration = 0;
+uint8_t boardAcceleration = 0;
 
 // Thresholds that trigger eStop
 uint8_t thresholdTemp = 40;
@@ -312,7 +312,7 @@ void swiAcceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
     // ABS is calculated from those three in a getter
-    acceleration = 1;
+    boardAcceleration = 1;
 }
 
 // Accelerometer interrupt when crash threshold reached
