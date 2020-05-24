@@ -127,7 +127,7 @@ void checkSpeedSwi() {
         if (accel_speed >= desired_speed_rpm) {
             accel_speed -= ESTOP_DECCEL_PER_TICK;
             if (speed_rpm < MIN_RPM) {
-                stopMotor(true);
+                //stopMotor(true);
                 disableMotor();
             }
         }
@@ -140,7 +140,7 @@ void checkSpeedSwi() {
         } else if (accel_speed >= desired_speed_rpm) {
             accel_speed -= DECCEL_PER_TICK;
             if (speed_rpm < MIN_RPM) {
-                stopMotor(true);
+                //stopMotor(true);
                 disableMotor();
                 motor_on = false;
             }

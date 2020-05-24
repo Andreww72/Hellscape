@@ -315,7 +315,7 @@ void swiCurrent(UArg arg) {
     // Variables for the ring buffer (not quite a ring buffer though)
     static uint8_t currentBHead = 0;
     static uint8_t currentCHead = 0;
-    currentSensorBBuffer[currentCHead++] = currentSensorB;
+    currentSensorBBuffer[currentBHead++] = currentSensorB;
     currentBHead %= windowCurrent;
     currentSensorCBuffer[currentCHead++] = currentSensorC;
     currentCHead %= windowCurrent;
@@ -325,10 +325,10 @@ void swiCurrent(UArg arg) {
     if (countCurrentTicks >= CURR_CHECK_TICKS) {
         countCurrentTicks = 0;
 
-//        if (currentSensorB > thresholdCurrent ||
-//                currentSensorC > thresholdCurrent) {
-//            eStopMotor();
-//        }
+        if (currentSensorB > thresholdCurrent ||
+                currentSensorC > thresholdCurrent) {
+            eStopMotor();
+        }
 
         System_printf("CSB: %f\n", currentSensorB);
         System_printf("CSC: %f\n\n", currentSensorC);
@@ -383,15 +383,15 @@ float getCurrent() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowCurrent; i++){
+    for (i = 0; i < windowCurrent; i++) {
         sumB += currentSensorBBuffer[i];
         sumC += currentSensorCBuffer[i];
     }
 
-    avgB = sumB / windowCurrent;
-    avgC = sumC / windowCurrent;
+    float avgB = sumB / windowCurrent;
+    float avgC = sumC / windowCurrent;
 
-    return (avgB + avgC) * 3.0 / 2.0;
+    return ((avgB + avgC) * 3.0 / 2.0);
 }
 
 uint8_t getAcceleration() {
@@ -404,7 +404,7 @@ void setThresholdTemp(uint8_t threshTemp) {
 }
 
 void setThresholdCurrent(uint16_t threshCurrent) {
-    thresholdCurrent = threshCurrent;
+    thresholdCurrent = 1;//threshCurrent;
 }
 
 void setThresholdAccel(uint16_t threshAccel) {
