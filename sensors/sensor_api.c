@@ -8,12 +8,12 @@
 #include "sensor_api.h"
 
 // Current sensor constants
-#define ADC_SEQB 0
-#define ADC_SEQC 1
+#define ADC_SEQB 1
+#define ADC_SEQC 2
 #define ADC_PRI 0
 #define ADC_STEP 0
 #define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define ADC_RESISTANCE 0.07 // FAQ
+#define ADC_RESISTANCE 0.007 // FAQ
 #define ADC_GAIN 10.0 // FAQ
 #define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
 
@@ -37,8 +37,8 @@ uint8_t accelerationBuffer[windowAcceleration];
 uint8_t light = 100;
 uint8_t boardTemp = 25;
 uint8_t motorTemp = 25;
-uint16_t currentSensorB = 0;
-uint16_t currentSensorC = 0;
+float currentSensorB = 0;
+float currentSensorC = 0;
 uint8_t acceleration = 0;
 
 // Thresholds that trigger eStop
@@ -47,8 +47,7 @@ uint16_t thresholdCurrent = 1000;
 uint16_t thresholdAccel = 1;
 
 // Setup handles
-UART_Handle uartBoard;
-UART_Handle uartMotor;
+char motor_tmp107_addr;
 Clock_Params clkParams;
 Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
@@ -76,12 +75,12 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
-    return
-            initLight() &&
-            initBoardTemp() &&
-            initMotorTemp(threshTemp) &&
-            initCurrent(threshCurrent) &&
-            initAcceleration(threshAccel);
+    //initLight();
+    initBoardTemp();
+    //initMotorTemp(threshTemp);
+    initCurrent(threshCurrent);
+    initAcceleration(threshAccel);
+    return 1;
 }
 
 ///////////**************??????????????
@@ -92,7 +91,6 @@ bool initLight() {
     // Create a recurring 2Hz SWI swi_light
     clkParams.period = 500;
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
-
 
     // I have just used the configuration for lab4b
     uint16_t config;
@@ -119,10 +117,6 @@ bool initLight() {
 
     status &= sensorOpt3001Test();
 
-
-    // TODO: setup the swi, because I definitely remember how to do that bit
-
-    //uint8_t success = 1;
     if (status) {
         return true;
     } else {
@@ -134,18 +128,9 @@ bool initLight() {
 bool initBoardTemp() {
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)initBoardTemp, 1, &clkParams);
-
-    UART_Params uartParams;
-    UART_Params_init(&uartParams);
-    uartParams.baudRate = 115200;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkParams);
 
     // TODO Setup UART connection for board TMP107
-    // PROBABLY ISN'T UART0
-//    uartBoard = UART_open(Board_UART0, &uartParams);
-//    if (uartBoard == NULL) {
-//         System_abort("Error opening the UART");
-//     }
 
     // TODO Setup board TMP107 temperature sensor
 
@@ -153,65 +138,21 @@ bool initBoardTemp() {
 }
 
 bool initMotorTemp(uint8_t threshTemp) {
+    // Initialise
+    init_motor_uart();
+    TMP107_Init();
+    motor_tmp107_addr = TMP107_LastDevicePoll();
+    int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
+
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
 
+    // TODO Setup interrupt for crossing threshold
     setThresholdTemp(threshTemp);
 
-    UART_Params uartParams;
-    UART_Params_init(&uartParams);
-    uartParams.baudRate = 115200;
-
-    // Setup UART connection for motor TMP107
-    // UART7 and GPIO setup statically in EK file
-    // TMP107_RX on PC4 with UART RX7
-    // TMP107_TX on PC5 with UART TX7
-    uartMotor = UART_open(Board_UART7, &uartParams);
-    if (uartMotor == NULL) {
-         System_abort("Error opening the UART");
-     }
-    // TODO Setup motor TM107 temperature sensor
-    // Start on doc page 14
-    uint8_t initTMP[3];
-    uint8_t setTMP[5];
-    uint8_t response[1];
-
-    uint8_t calibrationByte = 0x55;
-    uint8_t addressInitialiseByte = 0b10101001;
-    uint8_t addressAssignByte = 0b10100001;
-    uint8_t individualWriteByte = 0b00000001;
-    // Configuration register 1h (page 24)
-    uint8_t regPointerByte = 0b00000101;
-    // What I want in config reg is 0b1000000100010000
-    // However LSB is sent first thus:
-    uint8_t configRegWord1 = 0b00001000;
-    uint8_t configRegWord2 = 0b10000001;
-
-    initTMP[0] = calibrationByte;
-    initTMP[1] = addressInitialiseByte;
-    initTMP[2] = addressAssignByte;
-    setTMP[0] = calibrationByte;
-    setTMP[1] = individualWriteByte;
-    setTMP[2] = regPointerByte;
-    setTMP[3] = configRegWord1;
-    setTMP[4] = configRegWord2;
-
-    // TODO Make tmp107 throw an interrupt (which throws estop) if threshold exceeded
-
-    // Write setup data to TMP107
-    int writeInit = UART_write(uartMotor, &initTMP, 3);
-    // Might need a read here
-
-    int writeSet = UART_write(uartMotor, &setTMP, 3);
-    // Read device ok response
-    // Investigate 7ms delay thing
-    int readResp = UART_read(uartMotor, &response, 1);
-
     System_printf("Temperature setup\n");
-    System_printf("%d %d %d\n", writeInit, writeSet, readResp);
     System_flush();
-
     return true;
 }
 
@@ -272,9 +213,6 @@ bool initAcceleration(uint16_t thresholdAccel) {
 // Implementations of SWI functions  //
 ///////////**************??????????????
 
-
-
-
 // Read and filter light over I2C
 void swiLight(UArg arg) {
     // On sensor booster pack
@@ -300,40 +238,32 @@ void swiBoardTemp(UArg arg) {
 
 // Read and filter motor temperature sensors over UART
 void swiMotorTemp(UArg arg) {
-    uint8_t read[3];
-    uint8_t response[2];
-    uint8_t calibrationByte = 0x55;
-    uint8_t individualReadByte = 0b01000001;
-    // Temperature register 0h (page 23)
-    uint8_t regPointerByte = 000000101;
+    // Build global temperature read command packet
+    char tx[8];
+    char rx[64];
+    tx[0] = TMP107_Global_bit | TMP107_Read_bit | motor_tmp107_addr;
+    tx[1] = TMP107_Temp_reg;
 
-    read[0] = calibrationByte;
-    read[1] = individualReadByte;
-    read[2] = regPointerByte;
+    // Transmit global temperature read command
+    TMP107_Transmit(tx, 2);
+    // Master cannot transmit again until after we've received
+    // the echo of our transmit and given the TMP107 adequate
+    // time to reply. thus, we wait.
+    TMP107_WaitForEcho(2, 2,TMP107_Timeout);
+    // Copy the response from TMP107 into user variable
+    TMP107_RetrieveReadback(2, rx, 2);
 
-    // Write command
-    UART_write(uartMotor, &read, 3);
-    // Read response
-    UART_read(uartMotor, &response, 2);
+    // Convert two bytes received from TMP107 into degrees C
+    float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
 
-    System_printf("Temp:%d", response[0]);
-    System_printf("Temp:%d", response[1]);
+    System_printf("Temp: %f\n", tmp107_temp);
     System_flush();
-
-    // Calculate temperature from binary result
-    // Bits 15-2 contain temperature result. Bits 1-0 can be ignored
-    // Example: 00 1100 1000 0000 = C80h = 3200 � (TMP_RESOLUTION / LSB)
-    // Convert the 14-bit, left-justified, binary temperature to decimal
-    uint16_t result = ((response[0] << 8) | (response[1] & 0xff)) >> 2;
-
-    // Multiply decimal by resolution
-    motorTemp = result * TMP_RESOLUTION;
 }
 
+//int count = 0;
 // Read and filter two motor phase currents via analogue signals
 void swiCurrent(UArg arg) {
     uint32_t ADC1ValueB[1], ADC1ValueC[1];
-    uint32_t twelve_bitmask = 0xfff;
     float V_OutB = 0;
     float V_OutC = 0;
 
@@ -354,28 +284,30 @@ void swiCurrent(UArg arg) {
     ADCSequenceDataGet(ADC1_BASE, ADC_SEQC, ADC1ValueC);
 
     // CONVERT TO DIGITAL THAN CURRENT
-    // https://www.ti.com/lit/ds/symlink/tm4c1294ncpdt.pdf
-    // Page 1861 section contains relevant information for constants
-
-    // https://learn.sparkfun.com/tutorials/analog-to-digital-conversion/relating-adc-value-to-voltage
     // Analogue voltage = ADC reading * system voltage / ADC resolution
     // Current = (Vref/2 - Vsox) / Gcsa x Rsense
 
     // Convert digital value
-    V_OutB = ((ADC1ValueB[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
-    // I = V / R
-    currentSensorB = 1000.0 * (ADC_V_REF/2 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
+    V_OutB = ((float)ADC1ValueB[0] * ADC_V_REF) / ADC_RESOLUTION;
+    currentSensorB = (ADC_V_REF/2.0 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
 
     // Convert digital value
-    V_OutC = ((ADC1ValueC[0] & twelve_bitmask) * ADC_V_REF) / ADC_RESOLUTION;
-    // I = V / R
-    currentSensorC = 1000.0 * (ADC_V_REF/2 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+    V_OutC = ((float)ADC1ValueC[0] * ADC_V_REF) / ADC_RESOLUTION;
+    currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+
+//    count++;
+//    if (count == 250) {
+//        count = 0;
+//        System_printf("CSB: %f\n", currentSensorB);
+//        System_printf("CSC: %f\n\n", currentSensorC);
+//        System_flush();
+//    }
 
     // TODO Occasionally check if current exceeds threshold and if so throw eStop
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
+// NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
 void swiAcceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
@@ -399,7 +331,7 @@ float getLight() {
     float sum = 0;
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i<windowLight; i++){
+    for (i = 0; i < windowLight; i++){
         float converted;
         sensorOpt3001Convert(lightBuffer[i], &converted);
         sum += converted;
@@ -432,7 +364,7 @@ uint8_t getAcceleration() {
     return acceleration;
 }
 
-void setThresholdTemp(uint16_t threshTemp) {
+void setThresholdTemp(uint8_t threshTemp) {
     thresholdTemp = threshTemp;
     // TODO Update TMP107 with new limit...
 }

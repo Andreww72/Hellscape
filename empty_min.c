@@ -96,6 +96,12 @@ void DrawDateTime()
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
+    if (!initSensors(40, 1000, 1)) {
+        System_printf("Sensor initialisation failed\n");
+        System_flush();
+        while (1) {} // Stop here if it dies
+    }
+
     UserInterfaceInit(arg0, &sContext);
 
     while(1) {
@@ -134,8 +140,7 @@ bool setupGUI(uint32_t ui32SysClock) {
     Clock_Params_init(&clkParams);
     clkParams.period = 1000;
     clkParams.startFlag = TRUE;
-    Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn,
-                        1000, &clkParams);
+    Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn, 1000, &clkParams);
     clkHandle = Clock_handle(&clk0Struct);
     Clock_start(clkHandle);
 
@@ -146,6 +151,7 @@ int main(void) {
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+    Board_initUART();
 
     PWM_init();
 
@@ -157,15 +163,8 @@ int main(void) {
     if (!initMotor()) {
         System_printf("Motorlib initialisation failed\n");
         System_flush();
-        while (1) {} // stop here if it dies
+        while (1) {} // Stop here if it dies
     }
-    if (!initSensors(40, 1000, 1)) {
-        System_printf("Sensor initialisation failed\n");
-        System_flush();
-        while (1) {} // stop here if it dies
-    }
-
-    //startMotor(50);
 
     // Enable interrupts
     IntMasterEnable();

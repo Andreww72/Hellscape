@@ -10,6 +10,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xdc/std.h>
 #include <xdc/runtime/System.h>
 #include <ti/sysbios/knl/Clock.h>
@@ -24,10 +25,12 @@
 #include "sensor_ports.h"
 #include "opt3001/opt3001.h"
 #include "opt3001/i2cOptDriver.h"
+#include "tmp107/tmp107.h"
+#include "tmp107/hal.h"
 
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
-bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
+bool initSensors(uint8_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
 
 // Read and filter light over I2C
 float getLight();
