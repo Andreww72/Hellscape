@@ -18,6 +18,7 @@
 #define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
 
 #define TMP_RESOLUTION 0.015625
+#define CURR_CHECK_TICKS 250
 
 // Data window size constants
 #define windowLight 5
@@ -44,6 +45,7 @@ uint8_t boardAcceleration = 0;
 // Thresholds that trigger eStop
 uint8_t thresholdTemp = 40;
 uint16_t thresholdCurrent = 1000;
+uint16_t countCurrentTicks = 0;
 uint16_t thresholdAccel = 1;
 
 // Setup handles
@@ -76,10 +78,10 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
     clkParams.startFlag = TRUE;
 
     //initLight();
-    initBoardTemp();
-    initMotorTemp(threshTemp);
-    //initCurrent(threshCurrent);
-    initAcceleration(threshAccel);
+    //initBoardTemp();
+    //initMotorTemp(threshTemp);
+    initCurrent(threshCurrent);
+    //initAcceleration(threshAccel);
     return 1;
 }
 
@@ -140,7 +142,7 @@ bool initBoardTemp() {
 bool initMotorTemp(uint8_t threshTemp) {
     // Initialise
     init_motor_uart();
-    TMP107_Init();
+    char test = TMP107_Init();
     motor_tmp107_addr = TMP107_LastDevicePoll();
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
@@ -182,7 +184,6 @@ bool initCurrent(uint16_t thresholdCurrent) {
     setThresholdCurrent(thresholdCurrent);
 
     // Current sensors B and C on ADCs, A is not and thus not done.
-    // Note GPIO ports already setup in EK file
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
 
     // Current sensor B on D7 with ADC channel 4
@@ -192,17 +193,15 @@ bool initCurrent(uint16_t thresholdCurrent) {
     ADCSequenceEnable(ADC1_BASE, ADC_SEQB);
     ADCIntClear(ADC1_BASE, ADC_SEQB);
 
-    // Current sensor C on E3 with ADC channel 3
+    // Current sensor C on E3 with ADC channel 0
     GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
     ADCSequenceConfigure(ADC1_BASE, ADC_SEQC, ADC_TRIGGER_PROCESSOR, ADC_PRI);
-    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END);
     ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
     ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
-
-    // TODO Throw an interrupt (which throws estop) if threshold exceeded
 
     System_printf("Current setup\n", currentSensorC);
     System_flush();
@@ -281,7 +280,6 @@ void swiMotorTemp(UArg arg) {
     System_flush();
 }
 
-//int count = 0;
 // Read and filter two motor phase currents via analogue signals
 void swiCurrent(UArg arg) {
     uint32_t ADC1ValueB[1], ADC1ValueC[1];
@@ -316,15 +314,20 @@ void swiCurrent(UArg arg) {
     V_OutC = ((float)ADC1ValueC[0] * ADC_V_REF) / ADC_RESOLUTION;
     currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
 
-//    count++;
-//    if (count == 250) {
-//        count = 0;
-//        System_printf("CSB: %f\n", currentSensorB);
-//        System_printf("CSC: %f\n\n", currentSensorC);
-//        System_flush();
-//    }
+    // Check once a second if current limit exceeded
+    countCurrentTicks++;
+    if (countCurrentTicks => CURR_CHECK_TICKS) {
+        countCurrentTicks = 0;
 
-    // TODO Occasionally check if current exceeds threshold and if so throw eStop
+//        if (currentSensorB > thresholdCurrent ||
+//                currentSensorC > thresholdCurrent) {
+//            eStopMotor();
+//        }
+
+        System_printf("CSB: %f\n", V_OutB);
+        System_printf("CSC: %f\n\n", V_OutC);
+        System_flush();
+    }
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
@@ -338,8 +341,7 @@ void swiAcceleration(UArg arg) {
 
 // Accelerometer interrupt when crash threshold reached
 void callbackAccelerometer(UArg arg) {
-    // TODO Change this to the estop method once made
-    stopMotor_api();
+    eStopMotor();
 }
 
 ///////////**************??????????????
@@ -392,7 +394,6 @@ void setThresholdTemp(uint8_t threshTemp) {
 
 void setThresholdCurrent(uint16_t threshCurrent) {
     thresholdCurrent = threshCurrent;
-    // TODO Think this will be a manual check every so often
 }
 
 void setThresholdAccel(uint16_t threshAccel) {

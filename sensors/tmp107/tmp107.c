@@ -45,7 +45,7 @@ char TMP107_Init() {
 	char rx[32];
 	char last_response;
 
-	data[0] = TMP107_Global_bit | 0x94; // AddressInit command code
+	data[0] = 0x95; // AddressInit command code
 	data[1] = 0x5 | TMP107_Encode5bitAddress(0x1); // give the first device logical address 1
 	TMP107_Transmit(data, 2);
     /* Must wait 1250ms after receiving last device response
