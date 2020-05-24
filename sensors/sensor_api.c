@@ -77,8 +77,8 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
 
     //initLight();
     initBoardTemp();
-    //initMotorTemp(threshTemp);
-    initCurrent(threshCurrent);
+    initMotorTemp(threshTemp);
+    //initCurrent(threshCurrent);
     initAcceleration(threshAccel);
     return 1;
 }
@@ -145,11 +145,32 @@ bool initMotorTemp(uint8_t threshTemp) {
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
     // Create a recurring 2Hz SWI swi_temp
-    clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
+//    clkParams.period = 500;
+//    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
 
     // TODO Setup interrupt for crossing threshold
     setThresholdTemp(threshTemp);
+
+    // Build global temperature read command packet
+    char tx[8];
+    char rx[64];
+    tx[0] = TMP107_Global_bit | TMP107_Read_bit | motor_tmp107_addr;
+    tx[1] = TMP107_Temp_reg;
+
+    // Transmit global temperature read command
+    TMP107_Transmit(tx, 2);
+    // Master cannot transmit again until after we've received
+    // the echo of our transmit and given the TMP107 adequate
+    // time to reply. thus, we wait.
+    TMP107_WaitForEcho(2, 2,TMP107_Timeout);
+    // Copy the response from TMP107 into user variable
+    TMP107_RetrieveReadback(2, rx, 2);
+
+    // Convert two bytes received from TMP107 into degrees C
+    float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+
+    System_printf("Temp: %f\n", tmp107_temp);
+    System_flush();
 
     System_printf("Temperature setup\n");
     System_flush();

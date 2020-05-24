@@ -87,7 +87,7 @@ float TMP107_DecodeTemperatureResult(int HByte, int LByte){
     float temperature;
     Bytes = HByte << 8 | LByte;
     Bytes &= 0xFFFC; // Mask NVM bits not used in Temperature Result
-    temperature = (float) Bytes * 0.015625;
+    temperature = (float) Bytes / 256;
     return temperature;
 }
 
