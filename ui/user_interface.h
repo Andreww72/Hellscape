@@ -66,7 +66,7 @@ static void decreaseSetting();
 static void StartStopMotor();
 
 
-static void setupGraphScreen();
+static void setupGraphScreen(char * title, int yMin, int yMax);
 static void DrawDataOnGraph(uint32_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();

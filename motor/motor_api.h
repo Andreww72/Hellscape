@@ -11,7 +11,6 @@
 #include <xdc/runtime/System.h>
 #include <driverlib/gpio.h>
 #include <ti/drivers/GPIO.h>
-//#include <ti/sysbios/family/arm/m3/Hwi.h>
 #include <ti/sysbios/gates/GateHwi.h>
 
 #include "ui/user_interface.h"
@@ -32,12 +31,12 @@ bool initMotor();
 void startMotor(int duty_pct);
 
 /**
- * Stop the motor... quickly
+ * eStop of the motor - use in sensor interrupts for estop conditions
  */
 void eStopMotor();
 
 /**
- * Stop the motor
+ * Stop the motor normally
  */
 void stopMotor_api();
 

@@ -3,6 +3,11 @@
  *
  *  Created on: 3 May 2020
  *      Author: jshea
+ *
+ *      The author would like to note that the suppressions present throughout the script are due to what appears to be a CCStudio
+ *      bug, as the code compiles and runs without issue despite this "ambiguous function" nonsense.
+ *
+ *      TL;DR: CCStudio is a piece of poo
  */
 
 #include "motor_api.h"
@@ -14,13 +19,13 @@
 #define MIN_RPM 200
 #define MAX_CUM_ERROR 9000
 #define ACCEL_PER_TICK 3
-#define DECCEL_PER_TICK 30
-#define ESTOP_DECCEL_PER_TICK 40
+#define DECCEL_PER_TICK 6
+#define ESTOP_DECCEL_PER_TICK 10
 #define Kp 0.02   // DO NOT TOUCH
 #define Ki 0.0001 // DO NOT TOUCH
 
 GateHwi_Handle gateHwi;
-GateHwi_Params gHwiprms;
+GateHwi_Params gHwiprms; // @suppress("Ambiguous problem")
 
 int rotations = 0;
 int speed_rpm = 0;
@@ -29,17 +34,13 @@ int accel_speed = 0;
 int cum_speed_error = 0;
 int rpm_buffer[BUFFER_SIZE];
 int rpm_index = 0;
-
-int printed = 0;
-int executed = 0;
-
 bool motor_on = false;
 bool estop = false;
 
 // utility functions
-void motorUpdateFunc();
-void rotationCallbackFxn(unsigned int index);
-void setSpeed();
+static void motorUpdateFunc();
+static void rotationCallbackFxn(unsigned int index);
+static void setSpeed();
 
 bool initMotor() {
     int return_val;
@@ -47,8 +48,8 @@ bool initMotor() {
 
     return_val = initMotorLib(PWM, eb);
 
-    GateHwi_Params_init(&gHwiprms);
-    gateHwi = GateHwi_create(&gHwiprms,NULL);
+    GateHwi_Params_init(&gHwiprms); // @suppress("Invalid arguments")
+    gateHwi = GateHwi_create(&gHwiprms,NULL); // @suppress("Invalid arguments")
     if (gateHwi == NULL) {
         System_abort("Gate Hwi create has failed");
     }
@@ -91,9 +92,9 @@ void startMotor(int rpm) {
 }
 
 void eStopMotor() {
-    setDesiredSpeed(0); // stop motor
-    estop = true; // set estop flag
-    motor_on = false; // turn off motor
+    setDesiredSpeed(0);
+    estop = true;
+    motor_on = false;
 }
 
 void stopMotor_api() {
@@ -102,40 +103,24 @@ void stopMotor_api() {
 
 void setDesiredSpeed(int rpm) {
     UInt key;
-    key = GateHwi_enter(gateHwi);
+    key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
     desired_speed_rpm = rpm;
-    GateHwi_leave(gateHwi, key);
+    GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
 }
 
 int getSpeed() {
     int return_val;
     UInt key;
-    key = GateHwi_enter(gateHwi);
+    key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
     return_val = speed_rpm;
-    GateHwi_leave(gateHwi, key);
+    GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
+    return return_val;
 }
 
-void setSpeed() {
-    int error;
-    int duty;
-
+// Clock Swi for motor control
+void checkSpeedSwi() {
     UInt key;
-    key = GateHwi_enter(gateHwi);
-    // calculate PWM duty cycle
-    error = accel_speed - speed_rpm;
-    GateHwi_leave(gateHwi, key);
-    cum_speed_error += error;
-
-    // Calculate the duty cycle
-    duty = Kp*error + Ki*cum_speed_error;
-
-    setDuty(duty);
-}
-
-// Function to check & filter the speed as per the clock
-void checkSpeed() {
-    UInt key;
-    key = GateHwi_enter(gateHwi);
+    key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
 
     // If we're trying to accelerate, give the motor another lil push
     // Courtesy of friction, sometimes the bastard just won't start
@@ -145,21 +130,26 @@ void checkSpeed() {
 
     // estop
     if (estop) {
-        if (accel_speed > desired_speed_rpm) {
+        if (accel_speed >= desired_speed_rpm) {
             accel_speed -= ESTOP_DECCEL_PER_TICK;
-            if (accel_speed < MIN_RPM) {
-                accel_speed = 0;
+            if (speed_rpm < MIN_RPM) {
                 stopMotor(true);
+                disableMotor();
             }
         }
     }
 
-    // Accelerate/deccelerate - I have genuinely no idea what the heck is going on here
+    // Accelerate/decelerate
     if (motor_on) {
         if (accel_speed < desired_speed_rpm) {
             accel_speed += ACCEL_PER_TICK;
-        } else if (accel_speed > desired_speed_rpm) {
+        } else if (accel_speed >= desired_speed_rpm) {
             accel_speed -= DECCEL_PER_TICK;
+            if (speed_rpm < MIN_RPM) {
+                stopMotor(true);
+                disableMotor();
+                motor_on = false;
+            }
         }
     }
 
@@ -172,7 +162,7 @@ void checkSpeed() {
         rpm_index = 0;
     }
 
-    // Calculate speed for this tick
+    // Calculate speed for this tick (filtering for speed)
     int i;
     int tot_speed = 0;
     for (i = 0; i < BUFFER_SIZE; i++) {
@@ -180,22 +170,46 @@ void checkSpeed() {
     }
     speed_rpm = tot_speed / BUFFER_SIZE;
 
-    GateHwi_leave(gateHwi, key);
+    GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
 }
 
-// Function to update the motor commutation
-void motorUpdateFunc() {
+// Function to update the motor commutation & set the duty cycle
+static void motorUpdateFunc() {
     setSpeed();
     updateMotor(GPIO_read(Board_HALLA),
                 GPIO_read(Board_HALLB),
                 GPIO_read(Board_HALLC));
 }
 
-// Callback function to rotate the motor
-void rotationCallbackFxn(unsigned int index) {
+// Callback function to rotate the motor & count the number of rotations
+static void rotationCallbackFxn(unsigned int index) {
     UInt key;
-    key = GateHwi_enter(gateHwi);
+    key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
     rotations++;
-    GateHwi_leave(gateHwi, key);
+    GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
     motorUpdateFunc();
+}
+
+// Set the duty cycle based on the current RPM requirements
+static void setSpeed() {
+    int error;
+    int duty;
+
+    UInt key;
+    key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
+    // calculate PWM duty cycle
+    error = accel_speed - speed_rpm;
+    GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
+    cum_speed_error += error;
+
+    if (cum_speed_error > 20000) {
+        cum_speed_error = 20000;
+    } else if (cum_speed_error < -20000) {
+        cum_speed_error = -20000;
+    }
+
+    // Calculate the duty cycle
+    duty = Kp*error + Ki*cum_speed_error;
+
+    setDuty(duty);
 }
