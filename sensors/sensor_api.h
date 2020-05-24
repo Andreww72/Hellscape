@@ -40,9 +40,8 @@ uint8_t getBoardTemp();
 uint8_t getMotorTemp();
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
-float getCurrentSensorB();
-float getCurrentSensorC();
-float getCurrentTotal();
+// Just have the 'total' available for external.
+float getCurrent();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration

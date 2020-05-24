@@ -30,8 +30,8 @@
 uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
-uint8_t currentSensorBBuffer[windowCurrent];
-uint8_t currentSensorCBuffer[windowCurrent];
+float currentSensorBBuffer[windowCurrent];
+float currentSensorCBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
 
 // Current values (after filtering)
@@ -133,7 +133,6 @@ bool initBoardTemp() {
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkParams);
 
     // TODO Setup UART connection for board TMP107
-
     // TODO Setup board TMP107 temperature sensor
 
     return true;
@@ -236,7 +235,6 @@ bool initAcceleration(uint16_t thresholdAccel) {
 // Read and filter light over I2C
 void swiLight(UArg arg) {
     // On sensor booster pack
-    // Copy what we did in lab 4 ish
 
     // Variables for the ring buffer (not quite a ring buffer though)
     static uint8_t light_head = 0;
@@ -314,9 +312,17 @@ void swiCurrent(UArg arg) {
     V_OutC = ((float)ADC1ValueC[0] * ADC_V_REF) / ADC_RESOLUTION;
     currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
 
+    // Variables for the ring buffer (not quite a ring buffer though)
+    static uint8_t currentBHead = 0;
+    static uint8_t currentCHead = 0;
+    currentSensorBBuffer[currentCHead++] = currentSensorB;
+    currentBHead %= windowCurrent;
+    currentSensorCBuffer[currentCHead++] = currentSensorC;
+    currentCHead %= windowCurrent;
+
     // Check once a second if current limit exceeded
     countCurrentTicks++;
-    if (countCurrentTicks => CURR_CHECK_TICKS) {
+    if (countCurrentTicks >= CURR_CHECK_TICKS) {
         countCurrentTicks = 0;
 
 //        if (currentSensorB > thresholdCurrent ||
@@ -324,8 +330,8 @@ void swiCurrent(UArg arg) {
 //            eStopMotor();
 //        }
 
-        System_printf("CSB: %f\n", V_OutB);
-        System_printf("CSC: %f\n\n", V_OutC);
+        System_printf("CSB: %f\n", currentSensorB);
+        System_printf("CSC: %f\n\n", currentSensorC);
         System_flush();
     }
 }
@@ -371,20 +377,25 @@ uint8_t getMotorTemp() {
     return motorTemp;
 }
 
-float getCurrentSensorB() {
-    return currentSensorB;
-}
+float getCurrent() {
+    float sumB = 0;
+    float sumC = 0;
 
-float getCurrentSensorC() {
-    return currentSensorC;
-}
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowCurrent; i++){
+        sumB += currentSensorBBuffer[i];
+        sumC += currentSensorCBuffer[i];
+    }
 
-float getCurrentTotal() {
-    return (currentSensorB + currentSensorC) * 3.0 / 2.0;
+    avgB = sumB / windowCurrent;
+    avgC = sumC / windowCurrent;
+
+    return (avgB + avgC) * 3.0 / 2.0;
 }
 
 uint8_t getAcceleration() {
-    return acceleration;
+    return boardAcceleration;
 }
 
 void setThresholdTemp(uint8_t threshTemp) {
