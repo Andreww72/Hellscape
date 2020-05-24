@@ -77,7 +77,7 @@ static void drawMotorTemperatureGraph();
 static void drawLightGraph();
 
 // External graph api
-static void AddValueToGraph(uint32_t lastSample, int graphPage);
+void AddValueToGraph(uint32_t lastSample, int graphPage);
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);

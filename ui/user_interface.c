@@ -508,7 +508,7 @@ static void DrawDataOnGraph(uint32_t lastSample)
     previousSample = lastSample;
 }
 
-static void AddValueToGraph(uint32_t lastSample, int graphPage) {
+void AddValueToGraph(uint32_t lastSample, int graphPage) {
     if (drawingGraph && graphPageIdentifier == graphPage) {
         DrawDataOnGraph(lastSample);
     }

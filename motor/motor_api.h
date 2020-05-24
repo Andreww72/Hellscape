@@ -14,6 +14,7 @@
 //#include <ti/sysbios/family/arm/m3/Hwi.h>
 #include <ti/sysbios/gates/GateHwi.h>
 
+#include "ui/user_interface.h"
 #include "sensors/sensor_api.h"
 #include "drivers/motorlib.h"
 #include "Board.h"
