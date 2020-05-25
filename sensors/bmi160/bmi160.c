@@ -10,21 +10,36 @@
 
 
 bool sensorBmi160Init() {
+
+    uint8_t conf;
+
+    // BMI160_ACC_CONF_REG -> Page 57 of BMI160
+    conf = 0b00100100; // Date rate 6.25 Hz
+    bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_ACC_CONF_REG, &conf, 1);
+
+    // BMI160_ACC_RANGE_REG -> Page 58
+    conf = 0b101; // \pm 4g range (high bits not used)
+    bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_ACC_RANGE_REG, &conf, 1);
+
+
+    //BMI160_GYR_CONF_REG -> Page 59
+    conf = 0b0010110; // (3db cutoff freq), 25Hz output
+    bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_GYR_CONF_REG, &conf, 1);
+
+    // BMI160_GYR_RANGE_REG -> Page 60
+    conf = 0b100; //\pm 100\deg/s
+    bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_GYR_RANGE_REG, &conf, 1);
+
+
+    // TODO: Check BMI160_ERR_REG
     return true;
-
-    // id = BMI160_I2C_ADDR
-
-//    bmi160_writeI2C(BMI_I2C_ADDR, )
-
-
-
 }
 
 // write length long data to given addresses
 bool bmi160_writeI2C(uint8_t device_address, uint8_t register_address, uint8_t* data, uint8_t length){
 
     // TODO: Unsure if I2C0_BASE is correct
-    IC2MasterSlaveAddrSet(IC20_BASE, device_address, false);
+    I2CMasterSlaveAddrSet(I2C0_BASE, device_address, false);
 
     I2CMasterDataPut(I2C0_BASE, register_address);
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
@@ -47,7 +62,7 @@ bool bmi160_writeI2C(uint8_t device_address, uint8_t register_address, uint8_t* 
 
 bool bmi160_readI2C(uint8_t device_address, uint8_t register_address, uint8_t* data, uint8_t length){
 
-    IC2MasterSlaveAddrSet(IC20_BASE, device_address, false);
+    I2CMasterSlaveAddrSet(I2C0_BASE, device_address, false);
 
     I2CMasterDataPut(I2C0_BASE, register_address);
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
@@ -64,7 +79,7 @@ bool bmi160_readI2C(uint8_t device_address, uint8_t register_address, uint8_t* d
     while (i<length){
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
         while(I2CMasterBusy(I2C0_BASE)) { }
-        data[i++] = I2CMasterDataGet(I2C0_Base);
+        data[i++] = I2CMasterDataGet(I2C0_BASE);
     }
 
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
