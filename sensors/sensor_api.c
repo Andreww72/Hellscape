@@ -92,46 +92,47 @@ bool initLight() {
     I2C_Params i2cParams;
     I2C_Params_init(&i2cParams);
     i2cParams.bitRate = I2C_400kHz;
-    I2C_Handle lighti2c2 = I2C_open(Board_I2C2, &i2cParams);
-    if (!lighti2c2) {
+    I2C_Handle lighti2c = I2C_open(Board_I2C2, &i2cParams);
+    if (!lighti2c) {
         System_printf("Light I2C did not open\n");
         System_flush();
     }
 
-    bool status = sensorOpt3001Test(lighti2c2);
+    bool status = sensorOpt3001Test(lighti2c);
     while (!status) {
         System_printf("OPT3001 test failed, retrying\n");
         System_flush();
         status = sensorOpt3001Test(lighti2c);
     }
-    sensorOpt3001Init(lighti2c2);
-    sensorOpt3001Enable(lighti2c2, true);
+    sensorOpt3001Init(lighti2c);
+    sensorOpt3001Enable(lighti2c, true);
 
     // Create task that reads light sensor
     // This retarded elaborate: swi - sem - task setup
     // is needed cause the read function doesn't work in a swi
     // yet still need the stupid recurringness a clock swi gives.
-//    Semaphore_Params semParams;
-//    Semaphore_Params_init(&semParams);
-//    semParams.mode = Semaphore_Mode_BINARY;
-//    Semaphore_construct(&semLightStruct, 0, &semParams);
-//    semLightHandle = Semaphore_handle(&semLightStruct);
-//
-//    Task_Params taskParams;
-//    Task_Params_init(&taskParams);
-//    taskParams.stackSize = 512;
-//    taskParams.priority = 10;
-//    taskParams.stack = &taskLightStack;
-//    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
-//    if (lightTask == NULL) {
-//        System_printf("Task - LIGHT FAILED SETUP");
-//        System_flush();
-//        status = 0;
-//    }
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semLightStruct, 0, &semParams);
+    semLightHandle = Semaphore_handle(&semLightStruct);
 
-    // Create a recurring 2Hz SWI swi_light to post task read event
-//    clkParams.period = 500;
-//    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskLightStack;
+    taskParams.arg0 = lighti2c;
+    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
+    if (lightTask == NULL) {
+        System_printf("Task - LIGHT FAILED SETUP");
+        System_flush();
+        status = 0;
+    }
+
+    // Create a recurring 2Hz SWI swi_light to post semaphore
+    clkParams.period = 500;
+    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
     if (status) {
         System_printf("Light setup\n");
@@ -233,17 +234,18 @@ void swiLight(UArg arg) {
     Semaphore_post(semLightHandle);
 }
 
-void taskLight(UArg arg) {
+void taskLight(UArg handle) {
     // Variables for the ring buffer (not quite a ring buffer though)
     System_printf("Lux test\n");
     System_flush();
+
     while(1) {
         Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
 
         static uint8_t light_head = 0;
         uint16_t rawData = 0;
 
-        if (sensorOpt3001Read(lighti2c, &rawData)) {
+        if (sensorOpt3001Read((I2C_Handle)handle, &rawData)) {
             lightBuffer[light_head++] = rawData;
             light_head %= windowLight;
 
