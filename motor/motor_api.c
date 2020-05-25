@@ -41,6 +41,7 @@ bool estop = false;
 static void motorUpdateFunc();
 static void rotationCallbackFxn(unsigned int index);
 static void setSpeed();
+void checkSpeedSwi();
 
 bool initMotor() {
     int return_val;
@@ -118,7 +119,7 @@ void checkSpeedSwi() {
 
     // If we're trying to accelerate, give the motor another lil push
     // Courtesy of friction, sometimes the bastard just won't start
-    if (!speed_rpm) {
+    if (!speed_rpm && motor_on) {
         motorUpdateFunc();
     }
 
@@ -126,9 +127,9 @@ void checkSpeedSwi() {
     if (estop) {
         if (accel_speed >= desired_speed_rpm) {
             accel_speed -= ESTOP_DECCEL_PER_TICK;
-            if (speed_rpm < MIN_RPM) {
-                //stopMotor(true);
-                disableMotor();
+            if (speed_rpm <= 0) {
+                stopMotor(true);
+                // motor_on already set to false earlier in estop
             }
         }
     }
@@ -139,9 +140,8 @@ void checkSpeedSwi() {
             accel_speed += ACCEL_PER_TICK;
         } else if (accel_speed >= desired_speed_rpm) {
             accel_speed -= DECCEL_PER_TICK;
-            if (speed_rpm < MIN_RPM) {
-                //stopMotor(true);
-                disableMotor();
+            if (speed_rpm <= 0) {
+                stopMotor(true);
                 motor_on = false;
             }
         }
