@@ -374,7 +374,7 @@ const I2C_Config I2C_config[] = {
  */
 void EK_TM4C1294XL_initI2C(void)
 {
-    /* I2C7 Init */
+    /* I2C0 Init */
     /*
      * NOTE: TI-RTOS examples configure pins PD0 & PD1 for SSI2 or I2C7.  Thus,
      * a conflict occurs when the I2C & SPI drivers are used simultaneously in

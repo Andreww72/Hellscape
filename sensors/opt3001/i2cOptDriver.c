@@ -1,4 +1,19 @@
+/**************************************************************************************************
+*  Filename:       i2cOptDriver.c
+*  By:             Jesse Haviland
+*  Created:        1 February 2019
+*  Revised:        23 March 2019
+*  Revision:       2.0
+*
+*  Description:    i2c Driver for use with opt3001.c and the TI OP3001 Optical Sensor
+*************************************************************************************************/
+
+
+
+// ----------------------- Includes -----------------------
 #include "i2cOptDriver.h"
+#include <ti/drivers/I2C.h>
+#include <xdc/runtime/System.h>
 
 /*
  * Sets slave address to ui8Addr
@@ -49,3 +64,5 @@ bool readI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
 
     return true;
 }
+
+

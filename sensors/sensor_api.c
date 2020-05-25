@@ -1,5 +1,24 @@
 #include "sensor_api.h"
 
+// Current sensor constants
+#define ADC_SEQB 1
+#define ADC_SEQC 2
+#define ADC_PRI 0
+#define ADC_STEP 0
+#define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
+#define ADC_RESISTANCE 0.007 // FAQ
+#define ADC_GAIN 10.0 // FAQ
+#define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
+
+#define TMP_RESOLUTION 0.015625
+#define CURR_CHECK_TICKS 250
+
+// Data window size constants
+#define windowLight 5
+#define windowTemp 3
+#define windowCurrent 5
+#define windowAcceleration 5
+
 // Data collectors (before filtering)
 uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
@@ -56,7 +75,7 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
-    //initLight();
+    initLight();
     //initBoardTemp();
     //initMotorTemp(threshTemp);
     //initCurrent(threshCurrent);
@@ -69,50 +88,50 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
 ///////////**************??????????????
 // LIGHT SETUP
 bool initLight() {
-
     // Set up I2C
     I2C_Params i2cParams;
     I2C_Params_init(&i2cParams);
-    lighti2c = I2C_open(Board_I2C2, &i2cParams);
-    if (!lighti2c) {
+    i2cParams.bitRate = I2C_400kHz;
+    I2C_Handle lighti2c2 = I2C_open(Board_I2C2, &i2cParams);
+    if (!lighti2c2) {
         System_printf("Light I2C did not open\n");
         System_flush();
     }
 
-    bool status = sensorOpt3001Test(lighti2c);
+    bool status = sensorOpt3001Test(lighti2c2);
     while (!status) {
         System_printf("OPT3001 test failed, retrying\n");
         System_flush();
         status = sensorOpt3001Test(lighti2c);
     }
-    sensorOpt3001Init(lighti2c);
-    sensorOpt3001Enable(lighti2c, true);
+    sensorOpt3001Init(lighti2c2);
+    sensorOpt3001Enable(lighti2c2, true);
 
     // Create task that reads light sensor
     // This retarded elaborate: swi - sem - task setup
     // is needed cause the read function doesn't work in a swi
     // yet still need the stupid recurringness a clock swi gives.
-    Semaphore_Params semParams;
-    Semaphore_Params_init(&semParams);
-    semParams.mode = Semaphore_Mode_BINARY;
-    Semaphore_construct(&semLightStruct, 0, &semParams);
-    semLightHandle = Semaphore_handle(&semLightStruct);
-
-    Task_Params taskParams;
-    Task_Params_init(&taskParams);
-    taskParams.stackSize = 512;
-    taskParams.priority = 10;
-    taskParams.stack = &taskLightStack;
-    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
-    if (lightTask == NULL) {
-        System_printf("Task - LIGHT FAILED SETUP");
-        System_flush();
-        status = 0;
-    }
+//    Semaphore_Params semParams;
+//    Semaphore_Params_init(&semParams);
+//    semParams.mode = Semaphore_Mode_BINARY;
+//    Semaphore_construct(&semLightStruct, 0, &semParams);
+//    semLightHandle = Semaphore_handle(&semLightStruct);
+//
+//    Task_Params taskParams;
+//    Task_Params_init(&taskParams);
+//    taskParams.stackSize = 512;
+//    taskParams.priority = 10;
+//    taskParams.stack = &taskLightStack;
+//    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
+//    if (lightTask == NULL) {
+//        System_printf("Task - LIGHT FAILED SETUP");
+//        System_flush();
+//        status = 0;
+//    }
 
     // Create a recurring 2Hz SWI swi_light to post task read event
-    clkParams.period = 500;
-    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
+//    clkParams.period = 500;
+//    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
     if (status) {
         System_printf("Light setup\n");
@@ -216,6 +235,8 @@ void swiLight(UArg arg) {
 
 void taskLight(UArg arg) {
     // Variables for the ring buffer (not quite a ring buffer though)
+    System_printf("Lux test\n");
+    System_flush();
     while(1) {
         Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
 

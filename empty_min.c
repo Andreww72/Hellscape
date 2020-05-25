@@ -47,10 +47,9 @@
 #include "motor/motor_api.h"
 #include "sensors/sensor_api.h"
 
-#define TASKSTACKSIZE   4096
+#define UI_TASKSTACKSIZE   4096
 
-Char taskStack[TASKSTACKSIZE];
-Char taskStack2[TASKSTACKSIZE];
+Char taskStack[UI_TASKSTACKSIZE];
 tContext sContext;
 
 Clock_Struct clk0Struct;
@@ -84,8 +83,7 @@ void ClockFxn(UArg arg0) {
 }
 
 // Draws the date, time
-void DrawDateTime()
-{
+void DrawDateTime() {
     if (shouldDrawDateTime && !drawingGraph) {
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
@@ -95,9 +93,8 @@ void DrawDateTime()
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
     if (!initSensors(40, 1, 1)) {
-        System_printf("Sensor initialisation failed\n");
+        System_abort("Failed sensor init");
         System_flush();
-        while (1) {} // Stop here if it dies
     }
 
     UserInterfaceInit(arg0, &sContext);
@@ -108,7 +105,7 @@ void userInterfaceFxn(UArg arg0, UArg arg1) {
     }
 }
 
-bool setupGUI(uint32_t ui32SysClock) {
+bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     // Need this for Touchscreen
     Hwi_Params hwiParams;
     Hwi_Params_init(&hwiParams);
@@ -132,7 +129,7 @@ bool setupGUI(uint32_t ui32SysClock) {
     /* Init UI task */
     Task_Params taskParams;
     Task_Params_init(&taskParams);
-    taskParams.stackSize = TASKSTACKSIZE;
+    taskParams.stackSize = UI_TASKSTACKSIZE;
     taskParams.priority = 10;
     taskParams.stack = &taskStack;
     taskParams.arg0 = ui32SysClock;
@@ -175,7 +172,7 @@ int main(void) {
     if (!initMotor()) {
         System_printf("Motorlib initialisation failed\n");
         System_flush();
-        while (1) {} // Stop here if it dies
+        System_abort("Motor init failed");
     }
 
     // Enable interrupts
@@ -184,8 +181,11 @@ int main(void) {
     // Set pinout
     PinoutSet(false, false);
 
-    // Setup GUI
-    setupGUI(ui32SysClock);
+    // Setup sensors
+    //setupSensors();
+
+    // Setup GUI and sensors
+    setupSensorsAndGUI(ui32SysClock);
 
     /* Turn on user LED  */
     GPIO_write(Board_LED0, Board_LED_ON);
