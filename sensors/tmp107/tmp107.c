@@ -42,7 +42,7 @@
 char TMP107_Init() {
 	// Initialise the chain and return the last device address
 	char data[2];
-	char rx[32];
+	char rx[1];
 	char last_response;
 
 	data[0] = 0x95; // AddressInit command code
@@ -53,14 +53,14 @@ char TMP107_Init() {
      * dependent. This is because address init writes to the
      * internal eeprom, which takes additional time.
      */
-	last_response = TMP107_WaitForEcho(2, 33, TMP107_AddrInitTimeout); //force timeout with unreachable count
+	last_response = TMP107_WaitForEcho(2, 1, TMP107_AddrInitTimeout);
 	TMP107_RetrieveReadback(2, rx, last_response);
 
-    return rx[last_response - 1] & 0xF8;
+    return rx[0] & 0xF8;
 }
 
 char TMP107_LastDevicePoll() {
-    // query the device chain to find the last device in the chain
+    // Query the device chain to find the last device in the chain
     char tx[1];
     char rx[1];
     unsigned char retval;
@@ -72,13 +72,13 @@ char TMP107_LastDevicePoll() {
     return retval;
 }
 
-void TMP107_GlobalAlertClear1() {
-	// Clear all Alert1
-	char tx[1];
-	tx[0] = 0xB5; // GlobalAlertClear1 command code
-	TMP107_Transmit(tx, 1);
-	TMP107_WaitForEcho(1, 0, TMP107_Timeout);
-	// No need to RetrieveReadback
+void TMP107_AlertOverClear() {
+    // clear all Alert2
+    char tx[1];
+    tx[0] = 0x75; // GlobalAlertClear2 command code
+    TMP107_Transmit(tx, 1);
+    TMP107_WaitForEcho(1, 0, TMP107_Timeout);
+    // no need to RetrieveReadback
 }
 
 float TMP107_DecodeTemperatureResult(int HByte, int LByte){

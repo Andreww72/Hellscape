@@ -47,7 +47,7 @@
 
 char TMP107_Init();
 char TMP107_LastDevicePoll();
-void TMP107_GlobalAlertClear1();
+void TMP107_AlertOverClear();
 
 float TMP107_DecodeTemperatureResult(int HByte, int LByte);
 unsigned char TMP107_Encode5bitAddress(unsigned char addr);

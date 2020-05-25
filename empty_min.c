@@ -94,7 +94,7 @@ void DrawDateTime()
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
-    if (!initSensors(40, 1000, 1)) {
+    if (!initSensors(40, 1, 1)) {
         System_printf("Sensor initialisation failed\n");
         System_flush();
         while (1) {} // Stop here if it dies
@@ -162,6 +162,7 @@ int main(void) {
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+    Board_initI2C();
     Board_initUART();
 
     PWM_init();

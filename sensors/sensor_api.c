@@ -1,30 +1,4 @@
-/*
- * sensor_api.c
- *
- *  Created on: 6 May 2020
- *      Author: Tristan
- */
-
 #include "sensor_api.h"
-
-// Current sensor constants
-#define ADC_SEQB 1
-#define ADC_SEQC 2
-#define ADC_PRI 0
-#define ADC_STEP 0
-#define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define ADC_RESISTANCE 0.007 // FAQ
-#define ADC_GAIN 10.0 // FAQ
-#define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
-
-#define TMP_RESOLUTION 0.015625
-#define CURR_CHECK_TICKS 250
-
-// Data window size constants
-#define windowLight 5
-#define windowTemp 3
-#define windowCurrent 5
-#define windowAcceleration 5
 
 // Data collectors (before filtering)
 uint16_t lightBuffer[windowLight];
@@ -49,6 +23,10 @@ uint16_t countCurrentTicks = 0;
 uint16_t thresholdAccel = 1;
 
 // Setup handles
+I2C_Handle lighti2c;
+Char taskLightStack[512];
+Semaphore_Struct semLightStruct;
+Semaphore_Handle semLightHandle;
 char motor_tmp107_addr;
 Clock_Params clkParams;
 Clock_Struct clockLightStruct;
@@ -63,6 +41,7 @@ bool initMotorTemp(uint8_t threshTemp);
 bool initCurrent(uint16_t threshCurrent);
 bool initAcceleration(uint16_t threshAccel);
 void swiLight(UArg arg);
+void taskLight(UArg arg);
 void swiBoardTemp(UArg arg);
 void swiMotorTemp(UArg arg);
 void swiCurrent(UArg arg);
@@ -80,7 +59,7 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
     //initLight();
     //initBoardTemp();
     //initMotorTemp(threshTemp);
-    initCurrent(threshCurrent);
+    //initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
 }
@@ -90,36 +69,54 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
 ///////////**************??????????????
 // LIGHT SETUP
 bool initLight() {
-    // Create a recurring 2Hz SWI swi_light
+
+    // Set up I2C
+    I2C_Params i2cParams;
+    I2C_Params_init(&i2cParams);
+    lighti2c = I2C_open(Board_I2C2, &i2cParams);
+    if (!lighti2c) {
+        System_printf("Light I2C did not open\n");
+        System_flush();
+    }
+
+    bool status = sensorOpt3001Test(lighti2c);
+    while (!status) {
+        System_printf("OPT3001 test failed, retrying\n");
+        System_flush();
+        status = sensorOpt3001Test(lighti2c);
+    }
+    sensorOpt3001Init(lighti2c);
+    sensorOpt3001Enable(lighti2c, true);
+
+    // Create task that reads light sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semLightStruct, 0, &semParams);
+    semLightHandle = Semaphore_handle(&semLightStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 10;
+    taskParams.stack = &taskLightStack;
+    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
+    if (lightTask == NULL) {
+        System_printf("Task - LIGHT FAILED SETUP");
+        System_flush();
+        status = 0;
+    }
+
+    // Create a recurring 2Hz SWI swi_light to post task read event
     clkParams.period = 500;
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
-    // I have just used the configuration for lab4b
-    uint16_t config;
-    readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&config);
-
-    // Pin4 -> latch
-    config |= (1<<4+8);
-
-    // Pin3 -> polarity
-    config &= ~(1<<3+8);
-
-    writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&config);
-
-    uint16_t limit;
-    readI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&limit);
-
-    // For this one, set bits [15:12] to zero (Table 12)
-    limit &= ~(1<<7 | 1<<6 | 1<<5 | 1<<4);
-    writeI2C(OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&limit);
-
-    // Set the high limit register to 2000-3000
-    limit = 0b0010010010001001; // Don't think this is right
-    bool status = writeI2C(OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&limit);
-
-    status &= sensorOpt3001Test();
-
     if (status) {
+        System_printf("Light setup\n");
+        System_flush();
         return true;
     } else {
         return false;
@@ -145,35 +142,14 @@ bool initMotorTemp(uint8_t threshTemp) {
     motor_tmp107_addr = TMP107_LastDevicePoll();
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
-    // Create a recurring 2Hz SWI swi_temp
-//    clkParams.period = 500;
-//    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
-
     // TODO Setup interrupt for crossing threshold
     setThresholdTemp(threshTemp);
 
-    // Build global temperature read command packet
-    char tx[8];
-    char rx[64];
-    tx[0] = TMP107_Global_bit | TMP107_Read_bit | motor_tmp107_addr;
-    tx[1] = TMP107_Temp_reg;
+    // Create a recurring 2Hz SWI swi_temp
+    clkParams.period = 500;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
 
-    // Transmit global temperature read command
-    TMP107_Transmit(tx, 2);
-    // Master cannot transmit again until after we've received
-    // the echo of our transmit and given the TMP107 adequate
-    // time to reply. thus, we wait.
-    TMP107_WaitForEcho(2, 2,TMP107_Timeout);
-    // Copy the response from TMP107 into user variable
-    TMP107_RetrieveReadback(2, rx, 2);
-
-    // Convert two bytes received from TMP107 into degrees C
-    float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
-
-    System_printf("Temp: %f\n", tmp107_temp);
-    System_flush();
-
-    System_printf("Temperature setup\n");
+    System_printf("Temperature setup on device: \n", device_count);
     System_flush();
     return true;
 }
@@ -235,16 +211,28 @@ bool initAcceleration(uint16_t thresholdAccel) {
 // Read and filter light over I2C
 void swiLight(UArg arg) {
     // On sensor booster pack
+    Semaphore_post(semLightHandle);
+}
 
+void taskLight(UArg arg) {
     // Variables for the ring buffer (not quite a ring buffer though)
-    static uint8_t light_head = 0;
+    while(1) {
+        Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
 
-    uint16_t data;
-    if (!sensorOpt3001Read(&data))
-        return; // If read is not successful, do nothing
+        static uint8_t light_head = 0;
+        uint16_t rawData = 0;
 
-    lightBuffer[light_head++] = data;
-    light_head %= windowLight;
+        if (sensorOpt3001Read(lighti2c, &rawData)) {
+            lightBuffer[light_head++] = rawData;
+            light_head %= windowLight;
+
+            float tester = 0;
+            sensorOpt3001Convert(rawData, &tester);
+
+            System_printf("Lux: %5.2f\n", tester);
+            System_flush();
+        }
+    }
 }
 
 // Read and filter motor temperature sensors over UART
@@ -257,8 +245,9 @@ void swiBoardTemp(UArg arg) {
 // Read and filter motor temperature sensors over UART
 void swiMotorTemp(UArg arg) {
     // Build global temperature read command packet
-    char tx[8];
-    char rx[64];
+    char tx[2];
+    char rx[2];
+    //tx[0] = 0b10000010; // 0b01000001 flipped
     tx[0] = TMP107_Global_bit | TMP107_Read_bit | motor_tmp107_addr;
     tx[1] = TMP107_Temp_reg;
 
@@ -267,15 +256,15 @@ void swiMotorTemp(UArg arg) {
     // Master cannot transmit again until after we've received
     // the echo of our transmit and given the TMP107 adequate
     // time to reply. thus, we wait.
-    TMP107_WaitForEcho(2, 2,TMP107_Timeout);
+    int number = TMP107_WaitForEcho(2, 2, TMP107_Timeout);
     // Copy the response from TMP107 into user variable
-    TMP107_RetrieveReadback(2, rx, 2);
+    TMP107_RetrieveReadback(2, rx, number);
 
     // Convert two bytes received from TMP107 into degrees C
     float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
 
-    System_printf("Temp: %f\n", tmp107_temp);
-    System_flush();
+//    System_printf("Temp: %d, %d, %f\n", rx[1], rx[0], tmp107_temp);
+//    System_flush();
 }
 
 // Read and filter two motor phase currents via analogue signals
@@ -330,9 +319,9 @@ void swiCurrent(UArg arg) {
             eStopMotor();
         }
 
-        System_printf("CSB: %f\n", currentSensorB);
-        System_printf("CSC: %f\n\n", currentSensorC);
-        System_flush();
+//        System_printf("CSB: %f\n", currentSensorB);
+//        System_printf("CSC: %f\n\n", currentSensorC);
+//        System_flush();
     }
 }
 
@@ -404,7 +393,7 @@ void setThresholdTemp(uint8_t threshTemp) {
 }
 
 void setThresholdCurrent(uint16_t threshCurrent) {
-    thresholdCurrent = 1;//threshCurrent;
+    thresholdCurrent = threshCurrent;
 }
 
 void setThresholdAccel(uint16_t threshAccel) {

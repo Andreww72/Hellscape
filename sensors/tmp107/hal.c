@@ -54,7 +54,7 @@ void init_motor_uart() {
     uartParams.readMode = UART_MODE_CALLBACK;
     uartParams.readCallback = Uart_ReadCallback;
     uartParams.readReturnMode = UART_RETURN_FULL;
-    uartParams.baudRate = 9600;
+    uartParams.baudRate = 115200;
     uartMotor = UART_open(Board_UART7, &uartParams);
 
     if (uartMotor == NULL) {
@@ -64,11 +64,13 @@ void init_motor_uart() {
 }
 
 void Uart_ReadCallback(UART_Handle handle, void *rxBuf, size_t size) {
-    char read = *(char*)rxBuf;
-    if (read) {
-        tmp107_rx[tmp107_rxcnt] = *(char*)rxBuf;
+    char* readChar = (char*)rxBuf;
+    int i;
+    for (i = 0; i < size; i++) {
+        tmp107_rx[tmp107_rxcnt] = readChar[i];
         tmp107_rxcnt++;
     }
+
 }
 
 void TMP107_Transmit(char* tx_data, char tx_size){
@@ -89,43 +91,19 @@ char TMP107_WaitForEcho(char tx_size, char rx_size, int timeout_ms){
 	 * if timeout_ms lapses without receiving new bytes. this function returns the
 	 * number of bytes received after tx echo.
 	 */
-	char i = 0;
-	int count_ms = 0;
 	// Echo of cal byte + echo of transmission + additional bytes if read command
-	char expected_rxcnt = 1 + tx_size + rx_size;
-	/* Loop synopsis:
-	 * Wait for expected_rxcnt
-	 * Check once per millisecond, up to 40ms time out
-	 * Reset time out counter when a byte is received
-	 *
-	 * This loop runs while UART RX is being handled by ISR,
-	 * and reacts to the number of bytes that are currently
-	 * in the RX buffer.
-	 *
-	 * It is essential that all bytes are received, or that the
-	 * appropriate timeout has been endured, before another
-	 * transmit can occur. otherwise, corruption can occur.
-	 */
-	while (count_ms < timeout_ms) {
-		if (tmp107_rxcnt < expected_rxcnt) {
-			if (tmp107_rxcnt > i)
-				count_ms = 0;
-			i = tmp107_rxcnt;
-	        UART_read(uartMotor, &temp, 1);
-			count_ms++;
-		} else {
-			count_ms = timeout_ms;
-		}
-	}
-	return (tmp107_rxcnt - 1 - tx_size);
+	char expected_rxcnt = 1 + tx_size + rx_size; // +1 for calibration byte
+	Task_sleep(timeout_ms+1);
+    UART_read(uartMotor, &temp, expected_rxcnt);
+    return (tmp107_rxcnt - 1 - tx_size);
 }
 
-void TMP107_RetrieveReadback(char tx_size, char* rx_data, char rx_size){
+void TMP107_RetrieveReadback(char tx_size, char* rx_data, char rx_size) {
 	// Copy bytes received from UART buffer to user supplied array
 	char i;
-	if (rx_size > 0){
+	if (rx_size > 0) {
 		for (i = 0; i < rx_size; i++){
-			rx_data[i] = tmp107_rx[1 + tx_size + i];
+			rx_data[i] = tmp107_rx[1 + tx_size + i]; // +1 for calibration byte
 		}
 	}
 }
