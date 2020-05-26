@@ -1,156 +1,230 @@
-/*
- * sensor_api.c
- *
- *  Created on: 6 May 2020
- *      Author: Tristan
- */
-
-#include <xdc/std.h>
-#include <xdc/runtime/System.h>
-#include <ti/sysbios/knl/Clock.h>
-
 #include "sensor_api.h"
-#include "driverlib/adc.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/gpio.h"
-#include "inc/hw_memmap.h"
-#include <ti/sysbios/knl/Clock.h>
 
+// Current sensor constants
+#define ADC_SEQB 1
+#define ADC_SEQC 2
+#define ADC_PRI 0
+#define ADC_STEP 0
+#define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
+#define ADC_RESISTANCE 0.007 // FAQ
+#define ADC_GAIN 10.0 // FAQ
+#define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
+
+#define TMP_RESOLUTION 0.015625
+#define CURR_CHECK_TICKS 250
+
+// Data window size constants
 #define windowLight 5
 #define windowTemp 3
 #define windowCurrent 5
 #define windowAcceleration 5
 
-uint8_t lightBuffer[windowLight];
+// Data collectors (before filtering)
+uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
-uint8_t currentSensorBBuffer[windowCurrent];
-uint8_t currentSensorCBuffer[windowCurrent];
+float currentSensorBBuffer[windowCurrent];
+float currentSensorCBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
+
+// Current values (after filtering)
 uint8_t light = 100;
 uint8_t boardTemp = 25;
 uint8_t motorTemp = 25;
-uint8_t currentSensorB = 0;
-uint8_t currentSensorC = 0;
-uint8_t acceleration = 0;
+float currentSensorB = 0;
+float currentSensorC = 0;
+uint8_t boardAcceleration = 0;
 
+// Thresholds that trigger eStop
+uint8_t thresholdTemp = 40;
+uint16_t thresholdCurrent = 1000;
+uint16_t countCurrentTicks = 0;
+uint16_t thresholdAccel = 1;
+
+// Setup handles
+I2C_Handle lighti2c;
+Char taskLightStack[512];
+Char taskMotorTempStack[512];
+Semaphore_Struct semLightStruct;
+Semaphore_Handle semLightHandle;
+Semaphore_Struct semMotorTempStruct;
+Semaphore_Handle semMotorTempHandle;
+
+// Recurring SWI stuff
 Clock_Params clkParams;
 Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
 
-// SWI function prototypes
-void swi_light(UArg arg);
-void swi_temp(UArg arg);
-void swi_current(UArg arg);
-void swi_acceleration(UArg arg);
+// Function prototypes that are not in the .h (deliberately)
+bool initLight();
+bool initBoardTemp();
+bool initMotorTemp(uint8_t threshTemp);
+bool initCurrent(uint16_t threshCurrent);
+bool initAcceleration(uint16_t threshAccel);
+void swiLight(UArg arg);
+void taskLight(UArg handle);
+void swiBoardTemp(UArg arg);
+void swiMotorTemp(UArg arg);
+void taskMotorTemp(UArg handle);
+void swiCurrent(UArg arg);
+void swiAcceleration(UArg arg);
 
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool init_sensors(uint8_t accel_threshold){
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
-    return
-            init_light() &&
-            init_temp() &&
-            init_current() &&
-            init_acceleration(accel_threshold);
+    initLight();
+    //initBoardTemp();
+    //initMotorTemp(threshTemp);
+    initCurrent(threshCurrent);
+    //initAcceleration(threshAccel);
+    return 1;
 }
 
 ///////////**************??????????????
 //   Implementations sensor setups   //
 ///////////**************??????????????
-
 // LIGHT SETUP
-bool init_light() {
-    // Create a recurring 2Hz SWI swi_light
+bool initLight() {
+    // Set up I2C
+    I2C_Params i2cParams;
+    I2C_Params_init(&i2cParams);
+    i2cParams.bitRate = I2C_400kHz;
+    I2C_Handle lighti2c = I2C_open(Board_I2C2, &i2cParams);
+    if (!lighti2c) {
+        System_printf("Light I2C did not open\n");
+        System_flush();
+    }
+
+    bool status = sensorOpt3001Test(lighti2c);
+    while (!status) {
+        System_printf("OPT3001 test failed, retrying\n");
+        System_flush();
+        status = sensorOpt3001Test(lighti2c);
+    }
+    sensorOpt3001Init(lighti2c);
+    sensorOpt3001Enable(lighti2c, true);
+
+    // Create task that reads light sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semLightStruct, 0, &semParams);
+    semLightHandle = Semaphore_handle(&semLightStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskLightStack;
+    taskParams.arg0 = lighti2c; // Yo compiler, watch me assign it then cast it back
+    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
+    if (lightTask == NULL) {
+        System_printf("Task - LIGHT FAILED SETUP");
+        System_flush();
+        status = 0;
+    }
+
+    // Create a recurring 2Hz SWI swi_light to post semaphore
     clkParams.period = 500;
-    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swi_light, 1, &clkParams);
+    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
 
-    // TODO Setup I2C connection
-    // TODO Setup light sensor on board
-
-    System_printf("Light setup\n");
-    System_flush();
-
-    return true;
+    if (status) {
+        System_printf("Light setup\n");
+        System_flush();
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // TEMPERATURE SETUP
-bool init_temp() {
+bool initBoardTemp() {
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swi_temp, 1, &clkParams);
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkParams);
 
     // TODO Setup UART connection for board TMP107
     // TODO Setup board TMP107 temperature sensor
 
-    // TODO Setup UART connection for motor TMP107
-    // TODO Setup motor TM107 temperature sensor
+    return true;
+}
 
-    System_printf("Temperature setup\n");
+bool initMotorTemp(uint8_t threshTemp) {
+    // Initialise
+    init_motor_uart();
+    TMP107_Init();
+    char motor_tmp107_addr = TMP107_LastDevicePoll(); // motor_addr var will be a backwards 5 bit
+    int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
+
+    // TODO Setup interrupt for crossing threshold
+    setThresholdTemp(threshTemp);
+
+    // Create task that reads temp sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semMotorTempStruct, 0, &semParams);
+    semMotorTempHandle = Semaphore_handle(&semMotorTempStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskMotorTempStack;
+    taskParams.arg0 = motor_tmp107_addr;
+    Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
+    if (motorTempTask == NULL) {
+        System_printf("Task - MOTOR TEMP FAILED SETUP");
+        System_flush();
+        return false;
+    }
+
+    // Create a recurring 2Hz SWI swi_temp
+    clkParams.period = 500;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
+
+    System_printf("Temperature setup on device: \n", device_count);
     System_flush();
-
     return true;
 }
 
 // CURRENT SETUP
-#define VCC 5 // According to sensor datasheet
-#define SENSITIVITY 0.2 // 200 millVolts/A = 0.2 V/A for 10 AB (our current sensor)
-#define FIRST_STEP 0
-#define SEQUENCE 0 // Could be any value from 0 to 3 since only one sample is needed at a given request
-#define ADC_PRIORITY 0
-#define RESOLUTION 4095 // max digital value for 12 bit sample
-#define REF_VOLTAGE_PLUS 3.3 // Reference voltage used for ADC process, given in page 2149 of TM4C129XNCZAD Microcontroller Data Sheet
-#define NEUTRAL_VIOUT 0.5*VCC
+bool initCurrent(uint16_t threshCurrent) {
+    setThresholdCurrent(threshCurrent);
 
-// Initialise two of three motor phase current sensors via analogue signal (use ADC)
-bool init_current() {
-    // Current B (D7) and current C (E3) GPIO setup statically
-    // Setup ADC channels 4 (B) and 3 (C)
-
-    // Initialise ADC hardware (Page 11 of DK-TM4C129X User's Guide has relevant board pin information)
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+    // Current sensors B and C on ADCs, A is not and thus not done.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+
+    // Current sensor B on D7 with ADC channel 4
     GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQB, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQB, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQB);
+    ADCIntClear(ADC1_BASE, ADC_SEQB);
 
-    // Enable sample sequence 3 with a processor signal trigger. Sequence 3
-    // will do a single sample when the processor sends a signal to start the
-    // conversion. Each ADC module has 4 programmable sequences, sequence 0
-    // to sequence 3. This example is arbitrarily using sequence 3.
-    ADCSequenceConfigure(ADC0_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-    ADCSequenceConfigure(ADC1_BASE, SEQUENCE, ADC_TRIGGER_PROCESSOR, ADC_PRIORITY);
-
-    // Configure step 0 on sequence 0. Sample channel 0 (ADC_CTL_CH0) in
-    // differential mode (ADC_CTL_D) and configure the interrupt flag
-    // (ADC_CTL_IE) to be set when the sample is done. Tell the ADC logic
-    // that this is the last conversion on sequence 3 (ADC_CTL_END). Sequence
-    // 3 has only one programmable step. Sequence 1 and 2 have 4 steps, and
-    // sequence 0 has 8 programmable steps. Since we are only doing a single
-    // conversion using sequence 3 we will only configure step 0. For more
-    // information on the ADC sequences and steps, refer to the datasheet.
-    ADCSequenceStepConfigure(ADC0_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceStepConfigure(ADC1_BASE, SEQUENCE, FIRST_STEP, ADC_CTL_IE | ADC_CTL_CH3 | ADC_CTL_END);
-
-    // Since sample sequence 0 is now configured, it must be enabled.
-    ADCSequenceEnable(ADC0_BASE, SEQUENCE);
-    ADCSequenceEnable(ADC1_BASE, SEQUENCE);
-
-    // Clear the interrupt status flag.  This is done to make sure the
-    // interrupt flag is cleared before we sample.
-    ADCIntClear(ADC0_BASE, SEQUENCE);
-    ADCIntClear(ADC1_BASE, SEQUENCE);
+    // Current sensor C on E3 with ADC channel 0
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQC, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
+    ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     clkParams.period = 4;
-    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swi_current, 1, &clkParams);
+    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
 
     System_printf("Current setup\n", currentSensorC);
     System_flush();
@@ -161,12 +235,15 @@ bool init_current() {
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-bool init_acceleration(uint8_t threshold) {
+bool initAcceleration(uint16_t threshAccel) {
+    setThresholdAccel(threshAccel);
+
     // Create a recurring 200Hz SWI swi_acceleration
     clkParams.period = 5;
-    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swi_acceleration, 1, &clkParams);
+    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkParams);
 
     // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
+
     // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
 
     System_printf("Acceleration setup\n");
@@ -180,105 +257,198 @@ bool init_acceleration(uint8_t threshold) {
 ///////////**************??????????????
 
 // Read and filter light over I2C
-// Sample window size greater than 5 at >= 2Hz
-void swi_light(UArg arg) {
+void swiLight(UArg arg) {
     // On sensor booster pack
-    // Copy what we did in lab 4 ish
-    light = 100;
+    Semaphore_post(semLightHandle);
 }
 
-// Read and filter board and motor temperature sensors over UART
-// Sample window size greater than 3 at >= 2Hz
-void swi_temp(UArg arg) {
-    // Board temp on sensor booster pack
-    // TMP107 sensor
-    // Ports / pins ?
+void taskLight(UArg i2c_handle) {
+    while(1) {
+        Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
+
+        // Variables for the ring buffer (not quite a ring buffer though)
+        static uint8_t light_head = 0;
+        uint16_t rawData = 0;
+
+        if (sensorOpt3001Read((I2C_Handle)i2c_handle, &rawData)) {
+            lightBuffer[light_head++] = rawData;
+            light_head %= windowLight;
+        }
+    }
+}
+
+// Read and filter motor temperature sensors over UART
+void swiBoardTemp(UArg arg) {
+    // TODO read board temperature via UART
+    // Probably copy swiMotorTemp
     boardTemp = 25;
-
-    // Motor sensor next to the motor
-    // TMP107 sensor
-    // RX(7): PC4
-    // TX(7): PC5
-    motorTemp = 25;
 }
 
-// Read and filter two motor phase currents via analogue signals on the current sensors
-// Sample window size greater than 5 at >= 250Hz
-void swi_current(UArg arg) {
-    // This array is used for storing the data read from the ADC FIFO. It
-    // must be as large as the FIFO for the sequencer in use. This example
-    // uses sequence 3 which has a FIFO depth of 1. If another sequence
-    // was used with a deeper FIFO, then the array size must be changed.
-    uint32_t pui32ADC0ValueB[1], pui32ADC0ValueC[1], twelve_bitmask = 0xfff;
-    double VIOUT = 0;
+
+// Read and filter motor temperature sensors over UART
+void swiMotorTemp(UArg arg) {
+    // On sensor booster pack
+    Semaphore_post(semMotorTempHandle);
+}
+
+void taskMotorTemp(UArg motor_addr) {
+    while(1) {
+        Semaphore_pend(semMotorTempHandle, BIOS_WAIT_FOREVER);
+
+        // Build global temperature read command packet
+        char tx[2];
+        char rx[2];
+        //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
+        tx[0] = TMP107_Read_bit | (char)motor_addr;
+        tx[1] = TMP107_Temp_reg;
+
+        // Transmit global temperature read command
+        TMP107_Transmit(tx, 2);
+        // Master cannot transmit again until after we've received
+        // the echo of our transmit and given the TMP107 adequate
+        // time to reply. thus, we wait.
+        int number = TMP107_WaitForEcho(2, 2, TMP107_Timeout);
+        // Copy the response from TMP107 into user variable
+        TMP107_RetrieveReadback(2, rx, number);
+
+        // Convert two bytes received from TMP107 into degrees C
+        float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+
+        System_printf("Temp: %d, %d, %f\n", rx[1], rx[0], tmp107_temp);
+        System_flush();
+    }
+}
+
+// Read and filter two motor phase currents via analogue signals
+void swiCurrent(UArg arg) {
+    uint32_t ADC1ValueB[1], ADC1ValueC[1];
+    float V_OutB = 0;
+    float V_OutC = 0;
 
     // Trigger the ADC conversion.
-    ADCProcessorTrigger(ADC0_BASE, SEQUENCE);
-    ADCProcessorTrigger(ADC1_BASE, SEQUENCE);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQB);
+    ADCProcessorTrigger(ADC1_BASE, ADC_SEQC);
 
     // Wait for conversion to be completed.
-    while(!ADCIntStatus(ADC0_BASE, SEQUENCE, false));
-    while(!ADCIntStatus(ADC1_BASE, SEQUENCE, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQB, false));
+    while(!ADCIntStatus(ADC1_BASE, ADC_SEQC, false));
 
-    //Clear ADC Interrupt
-    ADCIntClear(ADC0_BASE, SEQUENCE);
-    ADCIntClear(ADC1_BASE, SEQUENCE);
+    // Clear ADC Interrupt
+    ADCIntClear(ADC1_BASE, ADC_SEQB);
+    ADCIntClear(ADC1_BASE, ADC_SEQC);
 
     // Read ADC Value.
-    ADCSequenceDataGet(ADC0_BASE, SEQUENCE, pui32ADC0ValueB);
-    ADCSequenceDataGet(ADC1_BASE, SEQUENCE, pui32ADC0ValueC);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQB, ADC1ValueB);
+    ADCSequenceDataGet(ADC1_BASE, ADC_SEQC, ADC1ValueC);
 
-    // Convert digital value to current reading (VREF- is 0, so it can be ignored)
-    VIOUT = ((pui32ADC0ValueB[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
-    currentSensorB = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
+    // CONVERT TO DIGITAL THAN CURRENT
+    // Analogue voltage = ADC reading * system voltage / ADC resolution
+    // Current = (Vref/2 - Vsox) / Gcsa x Rsense
 
-    // Convert digital value to current reading (VREF- is 0, so it can be ignored)
-    VIOUT = ((pui32ADC0ValueC[0] & twelve_bitmask) * REF_VOLTAGE_PLUS) / RESOLUTION;
-    currentSensorC = (VIOUT - NEUTRAL_VIOUT) / SENSITIVITY;
+    // Convert digital value
+    V_OutB = ((float)ADC1ValueB[0] * ADC_V_REF) / ADC_RESOLUTION;
+    currentSensorB = (ADC_V_REF/2.0 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
 
-//    System_printf("B: %d\n", currentSensorB);
-//    System_printf("C: %d\n", currentSensorC);
-//    System_flush();
+    // Convert digital value
+    V_OutC = ((float)ADC1ValueC[0] * ADC_V_REF) / ADC_RESOLUTION;
+    currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+
+    // Variables for the ring buffer (not quite a ring buffer though)
+    static uint8_t currentBHead = 0;
+    static uint8_t currentCHead = 0;
+    currentSensorBBuffer[currentBHead++] = currentSensorB;
+    currentBHead %= windowCurrent;
+    currentSensorCBuffer[currentCHead++] = currentSensorC;
+    currentCHead %= windowCurrent;
+
+    // Check once a second if current limit exceeded
+    countCurrentTicks++;
+    if (countCurrentTicks >= CURR_CHECK_TICKS) {
+        countCurrentTicks = 0;
+
+        if (currentSensorB > thresholdCurrent ||
+                currentSensorC > thresholdCurrent) {
+            eStopMotor();
+        }
+
+//        System_printf("CSB: %f\n", currentSensorB);
+//        System_printf("CSC: %f\n\n", currentSensorC);
+//        System_flush();
+    }
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// Sample window size (of each axis) greater than 5 at 200Hz
-// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-void swi_acceleration(UArg arg) {
+// NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
+void swiAcceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
-    acceleration = 1;
+    // TODO Get acceleration readings on three axes
+    // ABS is calculated from those three in a getter
+    boardAcceleration = 1;
 }
 
-// Accelerometer interrupt to detect user defined crash threshold (m/s^2)
-void callback_accelerometer(UArg arg) {
-    // BMI160 Inertial Measurement Sensor
-    // Trigger interrupt when >= threshold
+// Accelerometer interrupt when crash threshold reached
+void callbackAccelerometer(UArg arg) {
+    eStopMotor();
 }
 
 ///////////**************??????????????
 //              Getters              //
 ///////////**************??????????????
 
-uint8_t get_light() {
-    return light;
+float getLight() {
+    // Lux must be converted from the raw values as uint16_t is cheaper to store
+
+    float sum = 0;
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowLight; i++){
+        float converted;
+        sensorOpt3001Convert(lightBuffer[i], &converted);
+        sum += converted;
+    }
+
+    return sum/windowLight;
 }
 
-uint8_t get_boardTemp() {
+uint8_t getBoardTemp() {
     return boardTemp;
 }
 
-uint8_t get_motorTemp() {
+uint8_t getMotorTemp() {
     return motorTemp;
 }
 
-uint8_t get_currentSensorB() {
-    return currentSensorB;
+float getCurrent() {
+    float sumB = 0;
+    float sumC = 0;
+
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowCurrent; i++) {
+        sumB += currentSensorBBuffer[i];
+        sumC += currentSensorCBuffer[i];
+    }
+
+    float avgB = sumB / windowCurrent;
+    float avgC = sumC / windowCurrent;
+
+    return ((avgB + avgC) * 3.0 / 2.0);
 }
 
-uint8_t get_currentSensorC() {
-    return currentSensorC;
+uint8_t getAcceleration() {
+    return boardAcceleration;
 }
 
-uint8_t get_acceleration() {
-    return acceleration;
+void setThresholdTemp(uint8_t threshTemp) {
+    thresholdTemp = threshTemp;
+    // TODO Update TMP107 with new limit...
+}
+
+void setThresholdCurrent(uint16_t threshCurrent) {
+    thresholdCurrent = threshCurrent;
+}
+
+void setThresholdAccel(uint16_t threshAccel) {
+    thresholdAccel = threshAccel;
+    // TODO Update BMI160 with new limit...
 }

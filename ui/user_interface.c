@@ -378,7 +378,7 @@ static void drawPowerGraph()
 static void drawAmbientTemperatureGraph()
 {
     graphPageIdentifier = ambTempGraph;
-    setupGraphScreen("Ambient Temp (Celcius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
+    setupGraphScreen("Ambient Temp (Celsius)", AMB_TEMP_VAL_LOW, AMB_TEMP_VAL_HIGH);
 }
 
 static void drawSpeedGraph()
@@ -396,7 +396,7 @@ static void drawAccelerationGraph()
 static void drawMotorTemperatureGraph()
 {
     graphPageIdentifier = motorTempGraph;
-    setupGraphScreen("Motor Temp (Celcius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
+    setupGraphScreen("Motor Temp (Celsius)", MOTOR_TEMP_VAL_LOW, MOTOR_TEMP_VAL_HIGH);
 }
 
 static void drawLightGraph()

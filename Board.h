@@ -67,11 +67,7 @@ extern "C" {
 #define Board_CURRB                 EK_TM4C1294XL_CURR_B
 #define Board_CURRC                 EK_TM4C1294XL_CURR_C
 
-#define Board_I2C0                  EK_TM4C1294XL_I2C7
-#define Board_I2C1                  EK_TM4C1294XL_I2C8
-#define Board_I2C_TMP               EK_TM4C1294XL_I2C7
-#define Board_I2C_NFC               EK_TM4C1294XL_I2C7
-#define Board_I2C_TPL0401           EK_TM4C1294XL_I2C7
+#define Board_I2C2                  EK_TM4C1294XL_I2C2
 
 #define Board_PWM0                  EK_TM4C1294XL_PWM0
 #define Board_PWM1                  EK_TM4C1294XL_PWM0
@@ -88,6 +84,7 @@ extern "C" {
 #define Board_USBDEVICE             EK_TM4C1294XL_USBDEVICE
 
 #define Board_UART0                 EK_TM4C1294XL_UART0
+#define Board_UART7                 EK_TM4C1294XL_UART7
 
 #define Board_WATCHDOG0             EK_TM4C1294XL_WATCHDOG0
 
