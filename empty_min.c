@@ -101,7 +101,7 @@ void userInterfaceFxn(UArg arg0, UArg arg1) {
 
     while(1) {
         UserInterfaceDraw(&sContext);
-//        DrawDateTime();
+        DrawDateTime();
     }
 }
 
