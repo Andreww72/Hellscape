@@ -65,7 +65,8 @@ static void decreaseSetting();
 
 static void StartStopMotor();
 
-static void setupGraphScreen();
+
+static void setupGraphScreen(char * title, int yMin, int yMax);
 static void DrawDataOnGraph(uint32_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();
@@ -76,7 +77,7 @@ static void drawMotorTemperatureGraph();
 static void drawLightGraph();
 
 // External graph api
-static void AddValueToGraph(uint32_t lastSample, int graphPage);
+void AddValueToGraph(uint32_t lastSample, int graphPage);
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);

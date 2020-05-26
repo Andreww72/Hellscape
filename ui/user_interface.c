@@ -15,6 +15,7 @@
 #include <string.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <xdc/runtime/System.h>
+#include "motor/motor_api.h"
 #include "driverlib/eeprom.h"
 #include "driverlib/sysctl.h"
 
@@ -24,7 +25,7 @@
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 100
 #define SPEED_VAL_LOW 0
-#define SPEED_VAL_HIGH 100
+#define SPEED_VAL_HIGH 6000
 #define ACCELERATION_VAL_LOW 0
 #define ACCELERATION_VAL_HIGH 100
 #define MOTOR_TEMP_VAL_LOW 0
@@ -53,7 +54,7 @@ extern bool shouldDrawDataOnGraph;
 
 // EEPROM settings
 uint32_t e2prom_write_settings[4] = {50, 50, 50, 50}; /* Write struct */
-uint32_t e2prom_read_settings[4] =  {0, 0, 0, 0}; /* Read struct */
+uint32_t e2prom_read_settings[4] =  {0, 1000, 0, 0}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -311,6 +312,7 @@ static void doChangeToSetting(int amount) {
             e2prom_write_settings[1] = motorSpeedLimit;
             writeToEEPROM();
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);
+            setDesiredSpeed(motorSpeedLimit);
             break;
         case current:
             motorCurrentLimit += amount;
@@ -330,11 +332,27 @@ static void doChangeToSetting(int amount) {
 }
 
 static void increaseSetting() {
-    doChangeToSetting(5);
+    switch (settingsPageIdentifier) {
+        case motor:
+            if (motorSpeedLimit < 6000) {
+                doChangeToSetting(100);
+            }
+            break;
+        default:
+            doChangeToSetting(5);
+    }
 }
 
 static void decreaseSetting() {
-    doChangeToSetting(-5);
+    switch (settingsPageIdentifier) {
+        case motor:
+            if (motorSpeedLimit > 200) {
+                doChangeToSetting(-100);
+            }
+            break;
+        default:
+            doChangeToSetting(-5);
+    }
 }
 
 int motorState = 0;
@@ -342,9 +360,11 @@ static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
         motorState = 1;
+        startMotor(motorSpeedLimit);
     } else {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Start Motor");
         motorState = 0;
+        stopMotor_api();
     }
     WidgetPaint((tWidget *) &g_sMotorOption);
 }
@@ -488,7 +508,7 @@ static void DrawDataOnGraph(uint32_t lastSample)
     previousSample = lastSample;
 }
 
-static void AddValueToGraph(uint32_t lastSample, int graphPage) {
+void AddValueToGraph(uint32_t lastSample, int graphPage) {
     if (drawingGraph && graphPageIdentifier == graphPage) {
         DrawDataOnGraph(lastSample);
     }

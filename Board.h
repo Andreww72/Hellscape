@@ -59,6 +59,13 @@ extern "C" {
 #define Board_LED2                  EK_TM4C1294XL_D2
 #define Board_BUTTON0               EK_TM4C1294XL_USR_SW1
 #define Board_BUTTON1               EK_TM4C1294XL_USR_SW2
+#define Board_HALLA                 EK_TM4C1294XL_HALL_A
+#define Board_HALLB                 EK_TM4C1294XL_HALL_B
+#define Board_HALLC                 EK_TM4C1294XL_HALL_C
+#define Board_MOTORTEMPRX           EK_TM4C1294XL_MOTOR_TEMP_RX
+#define Board_MOTORTEMPTX           EK_TM4C1294XL_MOTOR_TEMP_TX
+#define Board_CURRB                 EK_TM4C1294XL_CURR_B
+#define Board_CURRC                 EK_TM4C1294XL_CURR_C
 
 #define Board_I2C0                  EK_TM4C1294XL_I2C7
 #define Board_I2C1                  EK_TM4C1294XL_I2C8

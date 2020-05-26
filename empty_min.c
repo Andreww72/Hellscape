@@ -44,11 +44,13 @@
 #include "grlib/grlib.h"
 #include "grlib/widget.h"
 #include "ui/user_interface.h"
+#include "motor/motor_api.h"
+#include "sensors/sensor_api.h"
 
 #define TASKSTACKSIZE   4096
 
 Char taskStack[TASKSTACKSIZE];
-
+Char taskStack2[TASKSTACKSIZE];
 tContext sContext;
 
 Clock_Struct clk0Struct;
@@ -62,19 +64,19 @@ extern void TouchScreenIntHandler(void);
 
 time_t t1;
 // Gets the current date and time
-static char * getCurrentDateTime()
-{
+static char * getCurrentDateTime() {
     static char t[30];
     struct tm * timeinfo;
     timeinfo = localtime ( &t1 );
     timeinfo->tm_hour += 16;
-    if (timeinfo->tm_hour>24){
+    if (timeinfo->tm_hour>24) {
         timeinfo->tm_hour -= 24;
         timeinfo->tm_mday +=1;
     }
     strcpy(t,asctime(timeinfo));
     return t;
 }
+
 
 Void ClockFxn(UArg arg0) {
     shouldDrawDateTime = true;
@@ -92,13 +94,12 @@ void DrawDateTime()
     }
 }
 
-void userInterfaceFxn(UArg arg0, UArg arg1)
-{
+void userInterfaceFxn(UArg arg0, UArg arg1) {
     UserInterfaceInit(arg0, &sContext);
-    while(1)
-    {
+
+    while(1) {
         UserInterfaceDraw(&sContext);
-        DrawDateTime();
+//        DrawDateTime();
     }
 }
 
@@ -153,16 +154,30 @@ bool setupGUI(uint32_t ui32SysClock) {
     return 1;
 }
 
-int main(void)
-{
+int main(void) {
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+
+    PWM_init();
 
     /* Set system clock */
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
             SYSCTL_CFG_VCO_480), 120000000);
+
+    if (!initMotor()) {
+        System_printf("Motorlib initialisation failed\n");
+        System_flush();
+        while (1) {} // stop here if it dies
+    }
+    if (!init_sensors(1)) {
+        System_printf("Sensor initialisation failed\n");
+        System_flush();
+        while (1) {} // stop here if it dies
+    }
+
+    //startMotor(50);
 
     // Enable interrupts
     IntMasterEnable();
