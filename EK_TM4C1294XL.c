@@ -297,20 +297,12 @@ GPIO_PinConfig gpioPinConfigs[] = {
     GPIOTiva_PH_2,
     /* EK_TM4C1294XL_HALL_C */
     GPIOTiva_PN_2,
-    /* EK_TM4C1294XL_MOTOR_TEMP_RX */
-    GPIOTiva_PC_4 | GPIO_CFG_INPUT,
-    /* EK_TM4C1294XL_CURR_B */
-    GPIOTiva_PE_3 | GPIO_CFG_INPUT,
-    /* EK_TM4C1294XL_CURR_C */
-    GPIOTiva_PD_7 | GPIO_CFG_INPUT,
 
     /* Output pins */
     /* EK_TM4C1294XL_USR_D1 */
     GPIOTiva_PN_1 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
     /* EK_TM4C1294XL_USR_D2 */
     GPIOTiva_PN_0 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
-    /* EK_TM4C1294XL_MOTOR_TEMP_TX */
-    GPIOTiva_PC_5 | GPIO_CFG_OUTPUT,
 };
 
 /*
@@ -362,13 +354,8 @@ I2CTiva_Object i2cTivaObjects[EK_TM4C1294XL_I2CCOUNT];
 
 const I2CTiva_HWAttrs i2cTivaHWAttrs[EK_TM4C1294XL_I2CCOUNT] = {
     {
-        .baseAddr = I2C7_BASE,
-        .intNum = INT_I2C7,
-        .intPriority = (~0)
-    },
-    {
-        .baseAddr = I2C8_BASE,
-        .intNum = INT_I2C8,
+        .baseAddr = I2C2_BASE,
+        .intNum = INT_I2C2,
         .intPriority = (~0)
     }
 };
@@ -379,11 +366,6 @@ const I2C_Config I2C_config[] = {
         .object = &i2cTivaObjects[0],
         .hwAttrs = &i2cTivaHWAttrs[0]
     },
-    {
-        .fxnTablePtr = &I2CTiva_fxnTable,
-        .object = &i2cTivaObjects[1],
-        .hwAttrs = &i2cTivaHWAttrs[1]
-    },
     {NULL, NULL, NULL}
 };
 
@@ -392,7 +374,7 @@ const I2C_Config I2C_config[] = {
  */
 void EK_TM4C1294XL_initI2C(void)
 {
-    /* I2C7 Init */
+    /* I2C0 Init */
     /*
      * NOTE: TI-RTOS examples configure pins PD0 & PD1 for SSI2 or I2C7.  Thus,
      * a conflict occurs when the I2C & SPI drivers are used simultaneously in
@@ -400,23 +382,13 @@ void EK_TM4C1294XL_initI2C(void)
      * conflict before running your the application.
      */
     /* Enable the peripheral */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C7);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
 
     /* Configure the appropriate pins to be I2C instead of GPIO. */
-    GPIOPinConfigure(GPIO_PD0_I2C7SCL);
-    GPIOPinConfigure(GPIO_PD1_I2C7SDA);
-    GPIOPinTypeI2CSCL(GPIO_PORTD_BASE, GPIO_PIN_0);
-    GPIOPinTypeI2C(GPIO_PORTD_BASE, GPIO_PIN_1);
-
-    /* I2C8 Init */
-    /* Enable the peripheral */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C8);
-
-    /* Configure the appropriate pins to be I2C instead of GPIO. */
-    GPIOPinConfigure(GPIO_PA2_I2C8SCL);
-    GPIOPinConfigure(GPIO_PA3_I2C8SDA);
-    GPIOPinTypeI2CSCL(GPIO_PORTA_BASE, GPIO_PIN_2);
-    GPIOPinTypeI2C(GPIO_PORTA_BASE, GPIO_PIN_3);
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
     I2C_init();
 }
@@ -769,11 +741,12 @@ void EK_TM4C1294XL_initUART(void)
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
+
     /* Enable and configure the peripherals used by the uart. */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);
-    GPIOPinConfigure(GPIO_PC6_U5RX);
+    GPIOPinConfigure(GPIO_PC4_U7RX);
     GPIOPinConfigure(GPIO_PC5_U7TX);
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     /* Initialize the UART driver */
 #if TI_DRIVERS_UART_DMA

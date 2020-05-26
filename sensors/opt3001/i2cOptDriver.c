@@ -12,42 +12,31 @@
 
 // ----------------------- Includes -----------------------
 #include "i2cOptDriver.h"
-#include "inc/hw_memmap.h"
-#include "driverlib/i2c.h"
-#include "utils/uartstdio.h"
-#include "driverlib/sysctl.h"
-
-
+#include <ti/drivers/I2C.h>
+#include <xdc/runtime/System.h>
 
 /*
  * Sets slave address to ui8Addr
  * Puts ui8Reg followed by two data bytes in *data and transfers
  * over i2c
  */
-bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
+bool writeI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
 {
-    // Load device slave address
-    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, false);
+    I2C_Transaction i2cTransaction;
+    uint8_t txBuf[3];
+    txBuf[0] = ui8Reg;
+    txBuf[1] = data[0];
+    txBuf[2] = data[1];
 
-    // Place the character to be sent in the data register
-    I2CMasterDataPut(I2C0_BASE, ui8Reg);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    while(I2CMasterBusy(I2C0_BASE)) { }
+    i2cTransaction.slaveAddress = ui8Addr;
+    i2cTransaction.writeBuf = txBuf;
+    i2cTransaction.writeCount = 3;
+    i2cTransaction.readBuf = NULL;
+    i2cTransaction.readCount = 0;
 
-    // Send Data
-    I2CMasterDataPut(I2C0_BASE, data[0]);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-    while(I2CMasterBusy(I2C0_BASE)) { }
-
-    I2CMasterDataPut(I2C0_BASE, data[1]);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-
-    // Delay until transmission completes
-    while(I2CMasterBusBusy(I2C0_BASE)) { }
-
+    I2C_transfer(i2c, &i2cTransaction);
     return true;
 }
-
 
 
 /*
@@ -57,34 +46,21 @@ bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
  * helps to flush the i2c register
  * Stores first two received bytes into *data
  */
-bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data)
-{
-    uint16_t delay = 1000;
-    uint8_t byteA, byteB;
+bool readI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
+    I2C_Transaction i2cTransaction;
+    uint8_t txBuf[1];
+    uint8_t rxBuf[2];
 
-    // Load device slave address
-    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, false);
+    i2cTransaction.slaveAddress = ui8Addr;
+    i2cTransaction.writeBuf = txBuf;
+    i2cTransaction.writeCount = 1;
+    i2cTransaction.readBuf = rxBuf;
+    i2cTransaction.readCount = 2;
 
-    // Place the character to be sent in the data register
-    I2CMasterDataPut(I2C0_BASE, ui8Reg);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    while(I2CMasterBusy(I2C0_BASE)) { }
-
-    // Load device slave address
-    I2CMasterSlaveAddrSet(I2C0_BASE, ui8Addr, true);
-
-    // Read two bytes from I2C
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-    while(I2CMasterBusy(I2C0_BASE)) { }
-    byteA = I2CMasterDataGet(I2C0_BASE);
-
-
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-    SysCtlDelay(delay);
-    byteB = I2CMasterDataGet(I2C0_BASE);
-
-    data[0] = byteA;
-    data[1] = byteB;
+    txBuf[0] = ui8Reg;
+    I2C_transfer(i2c, &i2cTransaction);
+    data[0] = rxBuf[0];
+    data[1] = rxBuf[1];
 
     return true;
 }

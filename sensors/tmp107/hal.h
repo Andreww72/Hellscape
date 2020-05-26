@@ -30,7 +30,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * --/COPYRIGHT--*/
 /*
- * hal_tmp107.h
+ * hal.h
  *
  *  Created on: Feb 12, 2016
  *      Author: a0271474
@@ -68,18 +68,18 @@
  * your hardware is connected in this way, uncomment the line below for TMP107
  * OneWireUART.
  */
-//#define TMP107_OneWireUART
 
-#define TMP107_Tx_Port GPIO_PORT_P4
-#define TMP107_Tx_Pin GPIO_PIN2
-#define TMP107_Rx_Port GPIO_PORT_P4
-#define TMP107_Rx_Pin GPIO_PIN3
+#include <ti/drivers/UART.h>
+#include <xdc/runtime/System.h>
+#include <ti/sysbios/knl/Clock.h>
+#include <ti/sysbios/knl/Task.h>
+#include <Board.h>
 
-// number of delay cycles that equal 1 ms
-#define TMP107_Wait_ms 1048
+#define TMP107_Temp_reg 0xA0
 
-void initClocks(uint32_t mclkFreq);
-void initPC_UART();
-void PC_Transmit(char* tx_data, char tx_size);
-void TMP107_Wait(int wait_ms);
-void initTMP107();
+void init_motor_uart();
+void Uart_ReadCallback(UART_Handle handle, void *rxBuf, size_t size);
+
+void TMP107_Transmit(char* tx_data, char tx_size);
+char TMP107_WaitForEcho(char tx_size, char rx_size, int timeout_ms);
+void TMP107_RetrieveReadback(char tx_size, char* rx_data, char rx_size);

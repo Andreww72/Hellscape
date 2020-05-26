@@ -36,8 +36,7 @@
  *      Author: a0271474
  */
 
-#define TMP107_Success			0
-#define TMP107_EchoError		1
+#include "hal.h"
 
 #define TMP107_Timeout			40
 #define TMP107_AddrInitTimeout	1250
@@ -46,41 +45,10 @@
 #define TMP107_Read_bit			0x2
 #define TMP107_Global_bit		0x1
 
-#define TMP107_AddressReset		0x2
-#define TMP107_SoftwareReset	0xB
-#define	TMP107_Alert1Clear		0x16
-#define TMP107_Alert2Clear		0xE
-
- /* Registers */
-#define TMP107_Temp_reg			0xA0
-#define TMP107_Conf_reg			0xA1
-#define TMP107_HiLimit1_reg		0xA2
-#define TMP107_LoLimit1_reg		0xA3
-#define TMP107_HiLimit2_reg		0xA4
-#define TMP107_LoLimit2_reg		0xA5
-#define TMP107_EEPROM1_reg		0xA6
-#define TMP107_EEPROM2_reg		0xA7
-#define TMP107_EEPROM3_reg		0xA8
-#define TMP107_EEPROM4_reg		0xA9
-#define TMP107_EEPROM5_reg		0xAA
-#define TMP107_EEPROM6_reg		0xAB
-#define TMP107_EEPROM7_reg		0xAC
-#define TMP107_EEPROM8_reg		0xAD
-#define TMP107_DieID_reg		0xAF //Read Only
-
-char TMP107_GlobalAddressInit();
+char TMP107_Init();
 char TMP107_LastDevicePoll();
-void TMP107_GlobalSoftwareReset();
-void TMP107_GlobalAlertClear1();
-void TMP107_GlobalAlertClear2();
+void TMP107_AlertOverClear();
 
 float TMP107_DecodeTemperatureResult(int HByte, int LByte);
-int TMP107_DecodeTemperatureResultInt(int HByte, int LByte);
 unsigned char TMP107_Encode5bitAddress(unsigned char addr);
 unsigned char TMP107_Decode5bitAddress(unsigned char addr);
-
-// define these functions in application code
-void TMP107_Transmit(char* tx_data, char tx_size);
-char TMP107_WaitForEcho(char tx_size, char rx_size, int timeout_ms);
-char TMP107_CheckEcho(char* tx_data, char tx_size);
-void TMP107_RetrieveReadback(char tx_size, char* rx_data, char rx_size);

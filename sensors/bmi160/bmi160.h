@@ -15,7 +15,6 @@
 #include <inc/hw_memmap.h>
 
 
-
 bool sensorBmi160Init();
 
 bool bmi160_writeI2C(uint8_t device_address, uint8_t register_address, uint8_t* data, uint8_t length);

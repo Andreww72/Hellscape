@@ -1,7 +1,7 @@
 /**************************************************************************************************
  *  Filename:       opt3001.c
- *  Revised:        
- *  Revision:       
+ *  Revised:
+ *  Revision:
  *
  *  Description:    Driver for the Texas Instruments OP3001 Optical Sensor
  *
@@ -35,8 +35,6 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************************************/
 
-// TODO: Clean up this file
-
 /* ------------------------------------------------------------------------------------------------
  *                                          Includes
  * ------------------------------------------------------------------------------------------------
@@ -44,16 +42,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
+#include <ti/drivers/I2C.h>
+#include <xdc/runtime/System.h>
 #include "i2cOptDriver.h"
 #include "opt3001.h"
-#include "utils/uartstdio.h"
-#include "../sensor_ports.h"
+#include"../sensor_ports.h"
+
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Constants
  * ------------------------------------------------------------------------------------------------
  */
-
 
 #define REG_MANUFACTURER_ID             0x7E
 #define REG_DEVICE_ID                   0x7F
@@ -61,9 +60,9 @@
 /* Register values */
 #define MANUFACTURER_ID                 0x5449  // TI
 #define DEVICE_ID                       0x3001  // Opt 3001
-#define CONFIG_RESET                    0xC810                   
+#define CONFIG_RESET                    0xC810
 #define CONFIG_TEST                     0xCC10
-#define CONFIG_ENABLE                   0x10C4 // 0xC410   - 100 ms, continuous               
+#define CONFIG_ENABLE                   0x10C4 // 0xC410   - 100 ms, continuous       0b0001000011000100
 #define CONFIG_DISABLE                  0x10C0 // 0xC010   - 100 ms, shutdown
 
 /* Bit values */
@@ -75,22 +74,11 @@
 /* Sensor data size */
 #define DATA_LENGTH                     2
 
-/* ------------------------------------------------------------------------------------------------
- *                                           Local Functions
- * ------------------------------------------------------------------------------------------------
- */
-
-
-/* ------------------------------------------------------------------------------------------------
- *                                           Local Variables
- * ------------------------------------------------------------------------------------------------
- */
 
 /* ------------------------------------------------------------------------------------------------
  *                                           Public functions
  * -------------------------------------------------------------------------------------------------
  */
-
 
 /**************************************************************************************************
  * @fn          sensorOpt3001Init
@@ -99,10 +87,8 @@
  *
  * @return      none
  **************************************************************************************************/
-bool sensorOpt3001Init(void)
-{
-	sensorOpt3001Enable(false);
-
+bool sensorOpt3001Init(I2C_Handle i2c) {
+	sensorOpt3001Enable(i2c, false);
 	return (true);
 }
 
@@ -114,20 +100,33 @@ bool sensorOpt3001Init(void)
  *
  * @return      none
  **************************************************************************************************/
-void sensorOpt3001Enable(bool enable)
-{
-	uint16_t val;
+void sensorOpt3001Enable(I2C_Handle i2c, bool enable) {
+	uint16_t val_config;
+	uint16_t val_low;
+	uint16_t val_high;
 
-	if (enable)
-	{
-		val = CONFIG_ENABLE;
-	}
-	else
-	{
-		val = CONFIG_DISABLE;
+	if (enable) {
+		val_config = 0b0001000011000100;
+		val_low = 0b1111111100001111;
+
+		// Eq 1: Lux = 0.01 x 2^(exponent_value) x result_value
+		// Exponent value of 10 (0b1010)
+		// Result value of 245 (0b000011110101)
+		val_high = 0b1111010110100000; // Results ~2509 lux
+	} else {
+	    val_config = CONFIG_DISABLE;
+	    val_low = 0;
+		val_high = 0;
 	}
 
-	writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val);
+	// Write to configuration register 01h
+	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val_config);
+
+	// Write to low-limit register 02h
+	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&val_low);
+
+	// Write to high-limit register 03h
+	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&val_high);
 }
 
 
@@ -140,12 +139,12 @@ void sensorOpt3001Enable(bool enable)
  *
  * @return      TRUE if valid data
  **************************************************************************************************/
-bool sensorOpt3001Read(uint16_t *rawData)
-{
+bool sensorOpt3001Read(I2C_Handle i2c, uint16_t *rawData) {
+
 	bool success;
 	uint16_t val;
 
-	success = readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val);
+	success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val);
 
 	if (success)
 	{
@@ -154,14 +153,14 @@ bool sensorOpt3001Read(uint16_t *rawData)
 
 	if (success)
 	{
-		success = readI2C(OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val);
+		success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val);
 	}
 
 	if (success)
 	{
 		// Swap bytes
 		*rawData = (val << 8) | (val>>8 &0xFF);
-	} 
+	}
 	else
 	{
 		//	  sensorSetErrorData
@@ -177,35 +176,28 @@ bool sensorOpt3001Read(uint16_t *rawData)
  *
  * @return      TRUE if passed, FALSE if failed
  **************************************************************************************************/
-bool sensorOpt3001Test(void){
-    // TODO: Remove usages of this
-    return true;
-//{
-//	uint16_t val;
-//
-//	// Check manufacturer ID
-//	readI2C(OPT3001_I2C_ADDRESS, REG_MANUFACTURER_ID, (uint8_t *)&val);
-//	val = (val << 8) | (val>>8 &0xFF);
-//
-//	if (val != MANUFACTURER_ID)
-//	{
-//		return (false);
-//	}
-//
-//	UARTprintf("Manufacturer ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
-//
-//	// Check device ID
-//	readI2C(OPT3001_I2C_ADDRESS, REG_DEVICE_ID, (uint8_t *)&val);
-//	val = (val << 8) | (val>>8 &0xFF);
-//
-//	if (val != DEVICE_ID)
-//	{
-//		return (false);
-//	}
-//
-//	UARTprintf("Device ID Correct: %c%c\n", val & 0x00FF, (val >> 8) & 0x00FF);
-//
-//	return (true);
+bool sensorOpt3001Test(I2C_Handle i2c) {
+	uint16_t val;
+
+	// Check manufacturer ID
+	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_MANUFACTURER_ID, (uint8_t *)&val);
+	val = (val << 8) | (val>>8 &0xFF);
+
+	if (val != MANUFACTURER_ID)
+	{
+		return (false);
+	}
+
+	// Check device ID
+	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_DEVICE_ID, (uint8_t *)&val);
+	val = (val << 8) | (val>>8 &0xFF);
+
+	if (val != DEVICE_ID)
+	{
+		return (false);
+	}
+
+	return (true);
 }
 
 /**************************************************************************************************
@@ -219,8 +211,7 @@ bool sensorOpt3001Test(void){
  *
  * @return      none
  **************************************************************************************************/
-void sensorOpt3001Convert(uint16_t rawData, float *convertedLux)
-{
+void sensorOpt3001Convert(uint16_t rawData, float *convertedLux) {
 	uint16_t e, m;
 
 	m = rawData & 0x0FFF;

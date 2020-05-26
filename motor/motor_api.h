@@ -11,6 +11,10 @@
 #include <xdc/runtime/System.h>
 #include <driverlib/gpio.h>
 #include <ti/drivers/GPIO.h>
+#include <ti/sysbios/gates/GateHwi.h>
+
+#include "ui/user_interface.h"
+#include "sensors/sensor_api.h"
 #include "drivers/motorlib.h"
 #include "Board.h"
 
@@ -27,21 +31,24 @@ bool initMotor();
 void startMotor(int duty_pct);
 
 /**
- * Stop the motor... quickly
+ * eStop of the motor - use in sensor interrupts for estop conditions
  */
 void eStopMotor();
 
 /**
- * Stop the motor
+ * Stop the motor normally
  */
 void stopMotor_api();
 
 /**
- * Set speed of the motor in rpm
- *
- * returns 1 for success or 0 for failure
+ * Set the desired speed of the motor in rpm.
  */
-int setSpeed(int speed_rpm);
+void setDesiredSpeed(int rpm);
+
+/**
+ * Get the speed of the motor in RPM.
+ */
+int getSpeed();
 
 
 
