@@ -68,8 +68,8 @@ void swiAcceleration(UArg arg);
 bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
-//    Clock_Params_init(&clkParams);
-//    clkParams.startFlag = TRUE;
+    Clock_Params_init(&clkParams);
+    clkParams.startFlag = TRUE;
 
     //initLight();
     //initBoardTemp();

@@ -48,9 +48,11 @@
 #include "motor/motor_api.h"
 #include "sensors/sensor_api.h"
 
-#define UI_TASKSTACKSIZE   4096
+#define UI_TASKSTACKSIZE 2048
+#define SE_TASKSTACKSIZE 2048
 
-Char taskStack[UI_TASKSTACKSIZE];
+Char taskUiStack[UI_TASKSTACKSIZE];
+Char taskSeStack[SE_TASKSTACKSIZE];
 tContext sContext;
 
 Clock_Struct clk0Struct;
@@ -93,16 +95,19 @@ void DrawDateTime() {
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
-//    if (!initSensors(40, 1, 1)) {
-//        System_abort("Failed sensor init");
-//        System_flush();
-//    }
 
     UserInterfaceInit(arg0, &sContext);
 
     while(1) {
         UserInterfaceDraw(&sContext);
         DrawDateTime();
+    }
+}
+
+void sensorsFxn(UArg arg0) {
+    if (!initSensors(40, 1, 1)) {
+        System_abort("Failed sensor init");
+        System_flush();
     }
 }
 
@@ -127,18 +132,26 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
         t1 = 3798880499;
     }
 
-    /* Init UI task */
+    // Init sensor setup task
     Task_Params taskParams;
     Task_Params_init(&taskParams);
+
+    taskParams.stackSize = SE_TASKSTACKSIZE;
+    taskParams.priority = 10;
+    taskParams.stack = &taskSeStack;
+    Task_Handle sensorTask = Task_create((Task_FuncPtr)sensorsFxn, &taskParams, NULL);
+    if (sensorTask == NULL) {
+        System_abort("Task - SENSOR FAILED SETUP");
+    }
+
+    // Init UI task
     taskParams.stackSize = UI_TASKSTACKSIZE;
     taskParams.priority = 10;
-    taskParams.stack = &taskStack;
+    taskParams.stack = &taskUiStack;
     taskParams.arg0 = ui32SysClock;
     Task_Handle uiTask = Task_create((Task_FuncPtr)userInterfaceFxn, &taskParams, NULL);
     if (uiTask == NULL) {
-        System_printf("Task - GUI FAILED SETUP");
-        System_flush();
-        return 0;
+        System_abort("Task - GUI FAILED SETUP");
     }
 
     Clock_Params clkParams;
