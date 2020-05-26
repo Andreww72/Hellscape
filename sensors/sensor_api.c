@@ -74,7 +74,7 @@ void swiAcceleration(UArg arg);
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t thresholdAccel) {
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
@@ -82,7 +82,7 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshold
 
     initLight();
     //initBoardTemp();
-    initMotorTemp(threshTemp);
+    //initMotorTemp(threshTemp);
     initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
