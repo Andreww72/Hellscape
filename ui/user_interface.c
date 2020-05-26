@@ -53,7 +53,7 @@ extern tContext sContext;
 extern bool shouldDrawDataOnGraph;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {50, 50, 50, 50}; /* Write struct */
+uint32_t e2prom_write_settings[4] = {50, 1000, 50, 50}; /* Write struct */
 uint32_t e2prom_read_settings[4] =  {0, 1000, 0, 0}; /* Read struct */
 
 // GUI - Canvas Drawing
@@ -309,6 +309,11 @@ static void doChangeToSetting(int amount) {
             break;
         case motor:
             motorSpeedLimit += amount;
+            if (motorSpeedLimit > 6000) {
+                motorSpeedLimit = 6000;
+            } else if (motorSpeedLimit < 200) {
+                motorSpeedLimit = 200;
+            }
             e2prom_write_settings[1] = motorSpeedLimit;
             writeToEEPROM();
             DrawSettingsParameters("Motor Speed", "RPM", motorSpeedLimit);

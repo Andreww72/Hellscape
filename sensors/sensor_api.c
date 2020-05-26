@@ -80,10 +80,10 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAcc
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
-    initLight();
+    //initLight();
     //initBoardTemp();
     //initMotorTemp(threshTemp);
-    initCurrent(threshCurrent);
+    //initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
 }

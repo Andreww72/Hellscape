@@ -43,6 +43,7 @@
 #include "drivers/touch.h"
 #include "grlib/grlib.h"
 #include "grlib/widget.h"
+
 #include "ui/user_interface.h"
 #include "motor/motor_api.h"
 #include "sensors/sensor_api.h"
@@ -180,9 +181,6 @@ int main(void) {
 
     // Set pinout
     PinoutSet(false, false);
-
-    // Setup sensors
-    //setupSensors();
 
     // Setup GUI and sensors
     setupSensorsAndGUI(ui32SysClock);

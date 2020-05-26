@@ -8,20 +8,19 @@
 #include <xdc/runtime/System.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Clock.h>
-#include <ti/drivers/UART.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
-#include "driverlib/adc.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/gpio.h"
-#include "inc/hw_memmap.h"
+#include <ti/drivers/UART.h>
+#include <driverlib/adc.h>
+#include <driverlib/sysctl.h>
+#include <driverlib/gpio.h>
+#include <inc/hw_memmap.h>
 
 #include "motor/motor_api.h"
 #include "opt3001/i2cOptDriver.h" // i2OptDriver must go before opt3001
 #include "opt3001/opt3001.h"
 #include "tmp107/tmp107.h"
 #include "tmp107/hal.h"
-
 #include "bmi160/bmi160.h"
 
 // Initialises all the sensors:
