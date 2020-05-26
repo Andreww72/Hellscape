@@ -137,7 +137,7 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     Task_Params_init(&taskParams);
 
     taskParams.stackSize = SE_TASKSTACKSIZE;
-    taskParams.priority = 10;
+    taskParams.priority = 11;
     taskParams.stack = &taskSeStack;
     Task_Handle sensorTask = Task_create((Task_FuncPtr)sensorsFxn, &taskParams, NULL);
     if (sensorTask == NULL) {

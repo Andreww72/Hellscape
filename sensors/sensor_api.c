@@ -71,10 +71,10 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAcc
     Clock_Params_init(&clkParams);
     clkParams.startFlag = TRUE;
 
-    //initLight();
+    initLight();
     //initBoardTemp();
     //initMotorTemp(threshTemp);
-    //initCurrent(threshCurrent);
+    initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
 }
@@ -261,7 +261,6 @@ void taskLight(UArg i2c_handle) {
         if (sensorOpt3001Read((I2C_Handle)i2c_handle, &rawData)) {
             lightBuffer[light_head++] = rawData;
             light_head %= windowLight;
-            System_printf("Lux: %d", rawData);
         }
     }
 }
@@ -343,7 +342,8 @@ void swiCurrent(UArg arg) {
 
     // Variables for the ring buffer (not quite a ring buffer though)
     static uint8_t currentHead = 0;
-    currentBuffer[currentHead++] = currentSensorB + currentSensorC;;
+    float current = currentSensorB + currentSensorC;
+    currentBuffer[currentHead++] = current;
     currentHead %= windowCurrent;
 
     // Check once a second if current limit exceeded
@@ -351,14 +351,9 @@ void swiCurrent(UArg arg) {
     if (countCurrentTicks >= CURR_CHECK_TICKS) {
         countCurrentTicks = 0;
 
-        if (currentSensorB > thresholdCurrent ||
-                currentSensorC > thresholdCurrent) {
+        if (current > thresholdCurrent) {
             eStopMotor();
         }
-
-        System_printf("CSB: %f\n", currentSensorB);
-        System_printf("CSC: %f\n\n", currentSensorC);
-        System_flush();
     }
 }
 
