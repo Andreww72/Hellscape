@@ -291,6 +291,12 @@ GPIO_PinConfig gpioPinConfigs[] = {
     GPIOTiva_PJ_0 | GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING,
     /* EK_TM4C1294XL_USR_SW2 */
     GPIOTiva_PJ_1 | GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING,
+    /* EK_TM4C1294XL_HALL_A */
+    GPIOTiva_PM_3,
+    /* EK_TM4C1294XL_HALL_B */
+    GPIOTiva_PH_2,
+    /* EK_TM4C1294XL_HALL_C */
+    GPIOTiva_PN_2,
 
     /* Output pins */
     /* EK_TM4C1294XL_USR_D1 */
@@ -308,7 +314,10 @@ GPIO_PinConfig gpioPinConfigs[] = {
  */
 GPIO_CallbackFxn gpioCallbackFunctions[] = {
     NULL,  /* EK_TM4C1294XL_USR_SW1 */
-    NULL   /* EK_TM4C1294XL_USR_SW2 */
+    NULL,  /* EK_TM4C1294XL_USR_SW2 */
+    NULL, /* HALL A */
+    NULL, /* HALL B */
+    NULL /* HALL C */
 };
 
 /* The device-specific GPIO_config structure */
@@ -345,13 +354,8 @@ I2CTiva_Object i2cTivaObjects[EK_TM4C1294XL_I2CCOUNT];
 
 const I2CTiva_HWAttrs i2cTivaHWAttrs[EK_TM4C1294XL_I2CCOUNT] = {
     {
-        .baseAddr = I2C7_BASE,
-        .intNum = INT_I2C7,
-        .intPriority = (~0)
-    },
-    {
-        .baseAddr = I2C8_BASE,
-        .intNum = INT_I2C8,
+        .baseAddr = I2C2_BASE,
+        .intNum = INT_I2C2,
         .intPriority = (~0)
     }
 };
@@ -361,11 +365,6 @@ const I2C_Config I2C_config[] = {
         .fxnTablePtr = &I2CTiva_fxnTable,
         .object = &i2cTivaObjects[0],
         .hwAttrs = &i2cTivaHWAttrs[0]
-    },
-    {
-        .fxnTablePtr = &I2CTiva_fxnTable,
-        .object = &i2cTivaObjects[1],
-        .hwAttrs = &i2cTivaHWAttrs[1]
     },
     {NULL, NULL, NULL}
 };
@@ -383,23 +382,13 @@ void EK_TM4C1294XL_initI2C(void)
      * conflict before running your the application.
      */
     /* Enable the peripheral */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C7);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
 
     /* Configure the appropriate pins to be I2C instead of GPIO. */
-    GPIOPinConfigure(GPIO_PD0_I2C7SCL);
-    GPIOPinConfigure(GPIO_PD1_I2C7SDA);
-    GPIOPinTypeI2CSCL(GPIO_PORTD_BASE, GPIO_PIN_0);
-    GPIOPinTypeI2C(GPIO_PORTD_BASE, GPIO_PIN_1);
-
-    /* I2C8 Init */
-    /* Enable the peripheral */
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C8);
-
-    /* Configure the appropriate pins to be I2C instead of GPIO. */
-    GPIOPinConfigure(GPIO_PA2_I2C8SCL);
-    GPIOPinConfigure(GPIO_PA3_I2C8SDA);
-    GPIOPinTypeI2CSCL(GPIO_PORTA_BASE, GPIO_PIN_2);
-    GPIOPinTypeI2C(GPIO_PORTA_BASE, GPIO_PIN_3);
+    GPIOPinConfigure(GPIO_PN5_I2C2SCL);
+    GPIOPinConfigure(GPIO_PN4_I2C2SDA);
+    GPIOPinTypeI2CSCL(GPIO_PORTN_BASE, GPIO_PIN_5);
+    GPIOPinTypeI2C(GPIO_PORTN_BASE, GPIO_PIN_4);
 
     I2C_init();
 }
@@ -715,6 +704,14 @@ const UARTTiva_HWAttrs uartTivaHWAttrs[EK_TM4C1294XL_UARTCOUNT] = {
         .flowControl = UART_FLOWCONTROL_NONE,
         .ringBufPtr  = uartTivaRingBuffer[0],
         .ringBufSize = sizeof(uartTivaRingBuffer[0])
+    },
+    {
+        .baseAddr = UART7_BASE,
+        .intNum = INT_UART7,
+        .intPriority = (~0),
+        .flowControl = UART_FLOWCONTROL_NONE,
+        .ringBufPtr  = uartTivaRingBuffer[1],
+        .ringBufSize = sizeof(uartTivaRingBuffer[1])
     }
 };
 
@@ -723,6 +720,11 @@ const UART_Config UART_config[] = {
         .fxnTablePtr = &UARTTiva_fxnTable,
         .object = &uartTivaObjects[0],
         .hwAttrs = &uartTivaHWAttrs[0]
+    },
+    {
+        .fxnTablePtr = &UARTTiva_fxnTable,
+        .object = &uartTivaObjects[1],
+        .hwAttrs = &uartTivaHWAttrs[1]
     },
     {NULL, NULL, NULL}
 };
@@ -738,6 +740,13 @@ void EK_TM4C1294XL_initUART(void)
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+
+    /* Enable and configure the peripherals used by the uart. */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART7);
+    GPIOPinConfigure(GPIO_PC4_U7RX);
+    GPIOPinConfigure(GPIO_PC5_U7TX);
+    GPIOPinTypeUART(GPIO_PORTC_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     /* Initialize the UART driver */
 #if TI_DRIVERS_UART_DMA

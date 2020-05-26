@@ -13,10 +13,10 @@
 #include "grlib/grlib.h"
 #include "drivers/Kentec320x240x16_ssd2119_spi.h"
 
-int motorTemperatureLimit;
-int motorSpeedLimit;
-int motorCurrentLimit;
-int motorAccelerationLimit;
+uint32_t motorTemperatureLimit;
+uint32_t motorSpeedLimit;
+uint32_t motorCurrentLimit;
+uint32_t motorAccelerationLimit;
 
 uint16_t drawingGraph;
 
@@ -26,6 +26,27 @@ enum page {
     current = 2,
     acceleration = 3,
 };
+
+enum graphPage {
+    powerGraph = 0,
+    ambTempGraph = 1,
+    speedGraph = 2,
+    accelerationGraph = 3,
+    motorTempGraph = 4,
+    lightGraph = 5
+};
+
+// Keep track of which page we're on
+int settingsPageIdentifier;
+int graphPageIdentifier;
+
+uint16_t s_x;
+uint16_t s_y;
+uint16_t width;
+uint16_t height;
+
+// EEPROM
+void writeToEEPROM();
 
 static char * getCurrentDateTime();
 void DrawDateTime();
@@ -44,8 +65,8 @@ static void decreaseSetting();
 
 static void StartStopMotor();
 
-static void SetupGraphScreen(char * title, int yMin, int yMax);
-static void DrawDataOnGraph(int yMin, int yMax);
+static void setupGraphScreen(char * title, int yMin, int yMax);
+static void DrawDataOnGraph(uint32_t last_sample);
 static void returnFromGraph();
 static void drawPowerGraph();
 static void drawAmbientTemperatureGraph();
@@ -53,6 +74,9 @@ static void drawSpeedGraph();
 static void drawAccelerationGraph();
 static void drawMotorTemperatureGraph();
 static void drawLightGraph();
+
+// External graph api
+void AddValueToGraph(uint32_t lastSample, int graphPage);
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext);
 void UserInterfaceDraw(tContext * sContext);
