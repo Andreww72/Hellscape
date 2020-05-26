@@ -93,10 +93,10 @@ void DrawDateTime() {
 }
 
 void userInterfaceFxn(UArg arg0, UArg arg1) {
-    if (!initSensors(40, 1, 1)) {
-        System_abort("Failed sensor init");
-        System_flush();
-    }
+//    if (!initSensors(40, 1, 1)) {
+//        System_abort("Failed sensor init");
+//        System_flush();
+//    }
 
     UserInterfaceInit(arg0, &sContext);
 

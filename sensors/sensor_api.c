@@ -23,17 +23,8 @@
 uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
-float currentSensorBBuffer[windowCurrent];
-float currentSensorCBuffer[windowCurrent];
+float currentBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
-
-// Current values (after filtering)
-uint8_t light = 100;
-uint8_t boardTemp = 25;
-uint8_t motorTemp = 25;
-float currentSensorB = 0;
-float currentSensorC = 0;
-uint8_t boardAcceleration = 0;
 
 // Thresholds that trigger eStop
 uint8_t thresholdTemp = 40;
@@ -77,8 +68,8 @@ void swiAcceleration(UArg arg);
 bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
-    Clock_Params_init(&clkParams);
-    clkParams.startFlag = TRUE;
+//    Clock_Params_init(&clkParams);
+//    clkParams.startFlag = TRUE;
 
     //initLight();
     //initBoardTemp();
@@ -226,9 +217,6 @@ bool initCurrent(uint16_t threshCurrent) {
     clkParams.period = 4;
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
 
-    System_printf("Current setup\n", currentSensorC);
-    System_flush();
-
     return true;
 }
 
@@ -273,6 +261,7 @@ void taskLight(UArg i2c_handle) {
         if (sensorOpt3001Read((I2C_Handle)i2c_handle, &rawData)) {
             lightBuffer[light_head++] = rawData;
             light_head %= windowLight;
+            System_printf("Lux: %d", rawData);
         }
     }
 }
@@ -281,7 +270,6 @@ void taskLight(UArg i2c_handle) {
 void swiBoardTemp(UArg arg) {
     // TODO read board temperature via UART
     // Probably copy swiMotorTemp
-    boardTemp = 25;
 }
 
 
@@ -347,19 +335,16 @@ void swiCurrent(UArg arg) {
 
     // Convert digital value
     V_OutB = ((float)ADC1ValueB[0] * ADC_V_REF) / ADC_RESOLUTION;
-    currentSensorB = (ADC_V_REF/2.0 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
+    float currentSensorB = (ADC_V_REF/2.0 - V_OutB) / (ADC_GAIN * ADC_RESISTANCE);
 
     // Convert digital value
     V_OutC = ((float)ADC1ValueC[0] * ADC_V_REF) / ADC_RESOLUTION;
-    currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
+    float currentSensorC = (ADC_V_REF/2.0 - V_OutC) / (ADC_GAIN * ADC_RESISTANCE);
 
     // Variables for the ring buffer (not quite a ring buffer though)
-    static uint8_t currentBHead = 0;
-    static uint8_t currentCHead = 0;
-    currentSensorBBuffer[currentBHead++] = currentSensorB;
-    currentBHead %= windowCurrent;
-    currentSensorCBuffer[currentCHead++] = currentSensorC;
-    currentCHead %= windowCurrent;
+    static uint8_t currentHead = 0;
+    currentBuffer[currentHead++] = currentSensorB + currentSensorC;;
+    currentHead %= windowCurrent;
 
     // Check once a second if current limit exceeded
     countCurrentTicks++;
@@ -371,9 +356,9 @@ void swiCurrent(UArg arg) {
             eStopMotor();
         }
 
-//        System_printf("CSB: %f\n", currentSensorB);
-//        System_printf("CSC: %f\n\n", currentSensorC);
-//        System_flush();
+        System_printf("CSB: %f\n", currentSensorB);
+        System_printf("CSC: %f\n\n", currentSensorC);
+        System_flush();
     }
 }
 
@@ -383,7 +368,6 @@ void swiAcceleration(UArg arg) {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
     // ABS is calculated from those three in a getter
-    boardAcceleration = 1;
 }
 
 // Accelerometer interrupt when crash threshold reached
@@ -397,8 +381,8 @@ void callbackAccelerometer(UArg arg) {
 
 float getLight() {
     // Lux must be converted from the raw values as uint16_t is cheaper to store
-
     float sum = 0;
+
     // This is fine since window is the size of the buffer
     uint8_t i;
     for (i = 0; i < windowLight; i++){
@@ -407,36 +391,30 @@ float getLight() {
         sum += converted;
     }
 
-    return sum/windowLight;
+    return (sum / (float)windowLight);
 }
 
 uint8_t getBoardTemp() {
-    return boardTemp;
+    return 25;
 }
 
 uint8_t getMotorTemp() {
-    return motorTemp;
+    return 25;
 }
 
 float getCurrent() {
-    float sumB = 0;
-    float sumC = 0;
+    float sum = 0;
 
     // This is fine since window is the size of the buffer
     uint8_t i;
     for (i = 0; i < windowCurrent; i++) {
-        sumB += currentSensorBBuffer[i];
-        sumC += currentSensorCBuffer[i];
+        sum += currentBuffer[i];
     }
-
-    float avgB = sumB / windowCurrent;
-    float avgC = sumC / windowCurrent;
-
-    return ((avgB + avgC) * 3.0 / 2.0);
+    return ((sum / (float)windowCurrent) * 3.0 / 2.0);
 }
 
 uint8_t getAcceleration() {
-    return boardAcceleration;
+    return 1;
 }
 
 void setThresholdTemp(uint8_t threshTemp) {
