@@ -49,7 +49,7 @@
 #include "sensors/sensor_api.h"
 
 #define UI_TASKSTACKSIZE 2048
-#define SE_TASKSTACKSIZE 2048
+#define SE_TASKSTACKSIZE 4096
 
 Char taskUiStack[UI_TASKSTACKSIZE];
 Char taskSeStack[SE_TASKSTACKSIZE];

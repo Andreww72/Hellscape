@@ -28,7 +28,7 @@ bool initMotor();
 /**
  * Start the motor
  */
-void startMotor(int duty_pct);
+void startMotor(int rpm);
 
 /**
  * eStop of the motor - use in sensor interrupts for estop conditions

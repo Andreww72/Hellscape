@@ -21,8 +21,8 @@
 
 // Data collectors (before filtering)
 uint16_t lightBuffer[windowLight];
-uint8_t boardTempBuffer[windowTemp];
-uint8_t motorTempBuffer[windowTemp];
+float boardTempBuffer[windowTemp];
+float motorTempBuffer[windowTemp];
 float currentBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
 
@@ -58,7 +58,7 @@ void swiLight(UArg arg);
 void taskLight(UArg handle);
 void swiBoardTemp(UArg arg);
 void swiMotorTemp(UArg arg);
-void taskMotorTemp(UArg handle);
+void taskMotorTemp(UArg uartMotor, UArg motor_addr);
 void swiCurrent(UArg arg);
 void swiAcceleration(UArg arg);
 
@@ -73,7 +73,7 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAcc
 
     initLight();
     //initBoardTemp();
-    //initMotorTemp(threshTemp);
+    initMotorTemp(threshTemp);
     initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
@@ -153,9 +153,9 @@ bool initBoardTemp() {
 
 bool initMotorTemp(uint8_t threshTemp) {
     // Initialise
-    init_motor_uart();
-    TMP107_Init();
-    char motor_tmp107_addr = TMP107_LastDevicePoll(); // motor_addr var will be a backwards 5 bit
+    UART_Handle uartMotor = init_motor_uart();
+    TMP107_Init(uartMotor);
+    char motor_tmp107_addr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
     // TODO Setup interrupt for crossing threshold
@@ -176,7 +176,8 @@ bool initMotorTemp(uint8_t threshTemp) {
     taskParams.stackSize = 512;
     taskParams.priority = 12;
     taskParams.stack = &taskMotorTempStack;
-    taskParams.arg0 = motor_tmp107_addr;
+    taskParams.arg0 = uartMotor; // Yo compiler, watch me assign it then cast it back
+    taskParams.arg1 = motor_tmp107_addr;
     Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
     if (motorTempTask == NULL) {
         System_printf("Task - MOTOR TEMP FAILED SETUP");
@@ -271,37 +272,44 @@ void swiBoardTemp(UArg arg) {
     // Probably copy swiMotorTemp
 }
 
-
 // Read and filter motor temperature sensors over UART
 void swiMotorTemp(UArg arg) {
     // On sensor booster pack
     Semaphore_post(semMotorTempHandle);
 }
 
-void taskMotorTemp(UArg motor_addr) {
+void taskMotorTemp(UArg uartMotor, UArg motor_addr) {
+    // Build temperature read command packet
+    char tx_size = 3;
+    char rx_size = 2;
+    char tx[3];
+    char rx[2];
+
+    //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
+    tx[0] = 0x55; // Calibration Byte
+    tx[1] = TMP107_Read_bit | (char)motor_addr;
+    tx[2] = TMP107_Temp_reg;
+
     while(1) {
         Semaphore_pend(semMotorTempHandle, BIOS_WAIT_FOREVER);
 
-        // Build global temperature read command packet
-        char tx[2];
-        char rx[2];
-        //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
-        tx[0] = TMP107_Read_bit | (char)motor_addr;
-        tx[1] = TMP107_Temp_reg;
-
         // Transmit global temperature read command
-        TMP107_Transmit(tx, 2);
+        TMP107_Transmit((UART_Handle)uartMotor, tx, tx_size);
         // Master cannot transmit again until after we've received
         // the echo of our transmit and given the TMP107 adequate
         // time to reply. thus, we wait.
-        int number = TMP107_WaitForEcho(2, 2, TMP107_Timeout);
         // Copy the response from TMP107 into user variable
-        TMP107_RetrieveReadback(2, rx, number);
+        TMP107_WaitForEcho((UART_Handle)uartMotor, tx_size, rx, rx_size);
 
         // Convert two bytes received from TMP107 into degrees C
         float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
 
-        System_printf("Temp: %d, %d, %f\n", rx[1], rx[0], tmp107_temp);
+        // Variables for the ring buffer (not quite a ring buffer though)
+        static uint8_t motorTempHead = 0;
+        motorTempBuffer[motorTempHead++] = tmp107_temp;
+        motorTempHead %= windowTemp;
+
+        System_printf("Temp: %f\n", tmp107_temp);
         System_flush();
     }
 }
@@ -389,12 +397,19 @@ float getLight() {
     return (sum / (float)windowLight);
 }
 
-uint8_t getBoardTemp() {
+float getBoardTemp() {
     return 25;
 }
 
-uint8_t getMotorTemp() {
-    return 25;
+float getMotorTemp() {
+    float sum = 0;
+
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowTemp; i++) {
+        sum += motorTempBuffer[i];
+    }
+    return (sum / (float)windowTemp);
 }
 
 float getCurrent() {
