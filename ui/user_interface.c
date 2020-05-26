@@ -439,8 +439,7 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     drawingGraph = 1;
     // AddValueToGraph(50, powerGraph);
     // AddValueToGraph(50, powerGraph);
-    // 
-  (yMin, yMax, rand() % 100);
+    // DrawDataOnGraph(yMin, yMax, rand() % 100);
 }
 
 // Graphs the chosen data on the map and scales accordingly

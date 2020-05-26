@@ -74,7 +74,7 @@ void swiAcceleration(UArg arg);
 ///////////**************??????????????
 // God tier make everything work fxn //
 ///////////**************??????????????
-bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t thresholdAccel) {
 
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkParams);
@@ -203,8 +203,8 @@ bool initMotorTemp(uint8_t threshTemp) {
 }
 
 // CURRENT SETUP
-bool initCurrent(uint16_t thresholdCurrent) {
-    setThresholdCurrent(thresholdCurrent);
+bool initCurrent(uint16_t threshCurrent) {
+    setThresholdCurrent(threshCurrent);
 
     // Current sensors B and C on ADCs, A is not and thus not done.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
@@ -235,8 +235,8 @@ bool initCurrent(uint16_t thresholdCurrent) {
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 // NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-bool initAcceleration(uint16_t thresholdAccel) {
-    setThresholdAccel(thresholdAccel);
+bool initAcceleration(uint16_t threshAccel) {
+    setThresholdAccel(threshAccel);
 
     // Create a recurring 200Hz SWI swi_acceleration
     clkParams.period = 5;

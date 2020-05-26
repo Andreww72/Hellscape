@@ -22,9 +22,11 @@
 #include "tmp107/tmp107.h"
 #include "tmp107/hal.h"
 
+#include "bmi160/bmi160.h"
+
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
-bool initSensors(uint8_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t thresholdAccel);
 
 // Read and filter light over I2C
 float getLight();
