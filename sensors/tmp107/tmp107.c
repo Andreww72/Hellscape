@@ -43,7 +43,7 @@ char TMP107_Init() {
 	// Initialise the chain and return the last device address
 	char data[2];
 	char rx[1];
-	char last_response;
+	char rx_size;
 
 	data[0] = 0x95; // AddressInit command code
 	data[1] = 0x5 | TMP107_Encode5bitAddress(0x1); // give the first device logical address 1
@@ -53,8 +53,8 @@ char TMP107_Init() {
      * dependent. This is because address init writes to the
      * internal eeprom, which takes additional time.
      */
-	last_response = TMP107_WaitForEcho(2, 1, TMP107_AddrInitTimeout);
-	TMP107_RetrieveReadback(2, rx, last_response);
+	rx_size = TMP107_WaitForEcho(2, 1, TMP107_AddrInitTimeout);
+	TMP107_RetrieveReadback(2, rx, rx_size);
 
     return rx[0] & 0xF8;
 }

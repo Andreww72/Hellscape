@@ -44,9 +44,13 @@ uint16_t thresholdAccel = 1;
 // Setup handles
 I2C_Handle lighti2c;
 Char taskLightStack[512];
+Char taskMotorTempStack[512];
 Semaphore_Struct semLightStruct;
 Semaphore_Handle semLightHandle;
-char motor_tmp107_addr;
+Semaphore_Struct semMotorTempStruct;
+Semaphore_Handle semMotorTempHandle;
+
+// Recurring SWI stuff
 Clock_Params clkParams;
 Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
@@ -60,9 +64,10 @@ bool initMotorTemp(uint8_t threshTemp);
 bool initCurrent(uint16_t threshCurrent);
 bool initAcceleration(uint16_t threshAccel);
 void swiLight(UArg arg);
-void taskLight(UArg arg);
+void taskLight(UArg handle);
 void swiBoardTemp(UArg arg);
 void swiMotorTemp(UArg arg);
+void taskMotorTemp(UArg handle);
 void swiCurrent(UArg arg);
 void swiAcceleration(UArg arg);
 
@@ -77,8 +82,8 @@ bool initSensors(uint8_t threshTemp, uint16_t threshCurrent, uint16_t threshAcce
 
     initLight();
     //initBoardTemp();
-    //initMotorTemp(threshTemp);
-    //initCurrent(threshCurrent);
+    initMotorTemp(threshTemp);
+    initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
 }
@@ -122,7 +127,7 @@ bool initLight() {
     taskParams.stackSize = 512;
     taskParams.priority = 12;
     taskParams.stack = &taskLightStack;
-    taskParams.arg0 = lighti2c;
+    taskParams.arg0 = lighti2c; // Yo compiler, watch me assign it then cast it back
     Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
     if (lightTask == NULL) {
         System_printf("Task - LIGHT FAILED SETUP");
@@ -158,12 +163,35 @@ bool initBoardTemp() {
 bool initMotorTemp(uint8_t threshTemp) {
     // Initialise
     init_motor_uart();
-    char test = TMP107_Init();
-    motor_tmp107_addr = TMP107_LastDevicePoll();
+    TMP107_Init();
+    char motor_tmp107_addr = TMP107_LastDevicePoll(); // motor_addr var will be a backwards 5 bit
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
     // TODO Setup interrupt for crossing threshold
     setThresholdTemp(threshTemp);
+
+    // Create task that reads temp sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semMotorTempStruct, 0, &semParams);
+    semMotorTempHandle = Semaphore_handle(&semMotorTempStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskMotorTempStack;
+    taskParams.arg0 = motor_tmp107_addr;
+    Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
+    if (motorTempTask == NULL) {
+        System_printf("Task - MOTOR TEMP FAILED SETUP");
+        System_flush();
+        return false;
+    }
 
     // Create a recurring 2Hz SWI swi_temp
     clkParams.period = 500;
@@ -234,26 +262,17 @@ void swiLight(UArg arg) {
     Semaphore_post(semLightHandle);
 }
 
-void taskLight(UArg handle) {
-    // Variables for the ring buffer (not quite a ring buffer though)
-    System_printf("Lux test\n");
-    System_flush();
-
+void taskLight(UArg i2c_handle) {
     while(1) {
         Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
 
+        // Variables for the ring buffer (not quite a ring buffer though)
         static uint8_t light_head = 0;
         uint16_t rawData = 0;
 
-        if (sensorOpt3001Read((I2C_Handle)handle, &rawData)) {
+        if (sensorOpt3001Read((I2C_Handle)i2c_handle, &rawData)) {
             lightBuffer[light_head++] = rawData;
             light_head %= windowLight;
-
-            float tester = 0;
-            sensorOpt3001Convert(rawData, &tester);
-
-            System_printf("Lux: %5.2f\n", tester);
-            System_flush();
         }
     }
 }
@@ -265,29 +284,39 @@ void swiBoardTemp(UArg arg) {
     boardTemp = 25;
 }
 
+
 // Read and filter motor temperature sensors over UART
 void swiMotorTemp(UArg arg) {
-    // Build global temperature read command packet
-    char tx[2];
-    char rx[2];
-    //tx[0] = 0b10000010; // 0b01000001 flipped
-    tx[0] = TMP107_Global_bit | TMP107_Read_bit | motor_tmp107_addr;
-    tx[1] = TMP107_Temp_reg;
+    // On sensor booster pack
+    Semaphore_post(semMotorTempHandle);
+}
 
-    // Transmit global temperature read command
-    TMP107_Transmit(tx, 2);
-    // Master cannot transmit again until after we've received
-    // the echo of our transmit and given the TMP107 adequate
-    // time to reply. thus, we wait.
-    int number = TMP107_WaitForEcho(2, 2, TMP107_Timeout);
-    // Copy the response from TMP107 into user variable
-    TMP107_RetrieveReadback(2, rx, number);
+void taskMotorTemp(UArg motor_addr) {
+    while(1) {
+        Semaphore_pend(semMotorTempHandle, BIOS_WAIT_FOREVER);
 
-    // Convert two bytes received from TMP107 into degrees C
-    float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+        // Build global temperature read command packet
+        char tx[2];
+        char rx[2];
+        //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
+        tx[0] = TMP107_Read_bit | (char)motor_addr;
+        tx[1] = TMP107_Temp_reg;
 
-//    System_printf("Temp: %d, %d, %f\n", rx[1], rx[0], tmp107_temp);
-//    System_flush();
+        // Transmit global temperature read command
+        TMP107_Transmit(tx, 2);
+        // Master cannot transmit again until after we've received
+        // the echo of our transmit and given the TMP107 adequate
+        // time to reply. thus, we wait.
+        int number = TMP107_WaitForEcho(2, 2, TMP107_Timeout);
+        // Copy the response from TMP107 into user variable
+        TMP107_RetrieveReadback(2, rx, number);
+
+        // Convert two bytes received from TMP107 into degrees C
+        float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+
+        System_printf("Temp: %d, %d, %f\n", rx[1], rx[0], tmp107_temp);
+        System_flush();
+    }
 }
 
 // Read and filter two motor phase currents via analogue signals
