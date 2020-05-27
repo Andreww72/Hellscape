@@ -23,6 +23,21 @@ char TMP107_Init(UART_Handle uartMotor) {
     return rx[0] & 0xF8;
 }
 
+void TMP107_Set_Config(UART_Handle uartMotor, char motorAddr) {
+    // Setup half second conversions in config register
+    char tx_size = 4;
+	char tx[4];
+    char rx2[0];
+
+	tx[0] = 0x55; // Calibration Byte
+    tx[1] = motorAddr;
+	tx[2] = TMP107_Config_reg;
+    // 1000000000000000
+	tx[3] = 0x1; // Set defaults except change to 500ms conversions
+    TMP107_Transmit(uartMotor, tx, tx_size);
+    TMP107_WaitForEcho(uartMotor, tx_size, rx2, 0);
+}
+
 char TMP107_LastDevicePoll(UART_Handle uartMotor) {
     // Query the device chain to find the last device in the chain
     char tx_size = 2;

@@ -13,6 +13,7 @@
 #define TMP107_Global_bit		0x1
 
 char TMP107_Init(UART_Handle uartMotor);
+void TMP107_Set_Config(UART_Handle uartMotor, char motorAddr);
 char TMP107_LastDevicePoll(UART_Handle uartMotor);
 void TMP107_AlertOverClear(UART_Handle uartMotor);
 

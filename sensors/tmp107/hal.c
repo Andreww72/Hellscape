@@ -2,7 +2,7 @@
 
 char temp[1];
 
-UART_Handle init_motor_uart() {
+UART_Handle initMotorUart() {
     UART_Params uartParams;
     UART_Params_init(&uartParams);
     uartParams.readMode = UART_MODE_BLOCKING;

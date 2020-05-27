@@ -10,6 +10,7 @@
 #include <ti/sysbios/knl/Clock.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
+#include <ti/drivers/GPIO.h>
 #include <ti/drivers/UART.h>
 #include <driverlib/adc.h>
 #include <driverlib/sysctl.h>
@@ -25,7 +26,7 @@
 
 // Initialises all the sensors:
 // Light, board temp, motor temp, currents, acceleration (and interrupt)
-bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel);
+bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
 
 // Read and filter light over I2C
 float getLight();
@@ -43,8 +44,8 @@ float getCurrent();
 uint8_t getAcceleration();
 
 // Update threshold values that trigger an eStop
-void setThresholdTemp(uint8_t threshTemp);
-void setThresholdCurrent(uint16_t threshCurrent);
-void setThresholdAccel(uint16_t threshAccel);
+void setThresholdTemp(uint8_t thresholdTemp);
+void setThresholdCurrent(uint16_t thresholdCurrent);
+void setThresholdAccel(uint16_t thresholdAccel);
 
 #endif /* SENSORS_SENSOR_API_H_ */
