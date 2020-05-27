@@ -61,7 +61,7 @@ void TMP107_AlertOverClear(UART_Handle uartMotor) {
     char rx[0];
 
     tx[0] = 0x55; // Calibration Byte
-    tx[1] = 0x75; // GlobalAlertClear2 command code
+    tx[1] = 0xB5; // GlobalAlertClear1 command code
     TMP107_Transmit(uartMotor, tx, tx_size);
     TMP107_WaitForEcho(uartMotor, tx_size, rx, rx_size);
     // no need to RetrieveReadback
@@ -97,4 +97,19 @@ unsigned char TMP107_Decode5bitAddress(unsigned char addr) {
 		}
 	}
 	return out;
+}
+
+uint16_t reverseBits(uint16_t num) {
+
+    uint16_t count = sizeof(num) * 8 - 1;
+    uint16_t reverse_num = num;
+    num >>= 1;
+    while(num) {
+        reverse_num <<= 1;
+        reverse_num |= num & 1;
+        num >>= 1;
+        count--;
+    }
+    reverse_num <<= count;
+    return reverse_num;
 }

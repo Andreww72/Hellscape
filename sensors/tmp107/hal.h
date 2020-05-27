@@ -7,7 +7,7 @@
 
 #define TMP107_Temp_reg 0xA0 // At 0h thus 1010PPPP=10100000
 #define TMP107_Config_reg 0b10100001 // At 1h thus 1010PPPP=10100001
-//#define TMP107_High_Limit_reg 1010 + 0x64
+#define TMP107_High_Limit_reg 0b10100010 // At 1h thus 1010PPPP=10100010
 #define TMP107_Timeout 40
 
 UART_Handle initMotorUart();

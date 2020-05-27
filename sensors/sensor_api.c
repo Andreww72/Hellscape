@@ -32,6 +32,7 @@ uint16_t countCurrentTicks = 0;
 
 // Setup handles
 UART_Handle uartMotor;
+char motorAddr;
 Char taskLightStack[512];
 Char taskMotorTempStack[512];
 Semaphore_Struct semLightStruct;
@@ -91,7 +92,7 @@ void swiMotorTemp(UArg arg) {
     Semaphore_post(semMotorTempHandle);
 }
 
-void taskMotorTemp(UArg motorAddr) {
+void taskMotorTemp() {
     // Build temperature read command packet
     char tx_size = 3;
     char rx_size = 2;
@@ -100,7 +101,7 @@ void taskMotorTemp(UArg motorAddr) {
 
     //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
     tx[0] = 0x55; // Calibration Byte
-    tx[1] = TMP107_Read_bit | (char)motorAddr;
+    tx[1] = TMP107_Read_bit | motorAddr;
     tx[2] = TMP107_Temp_reg;
 
     while(1) {
@@ -187,8 +188,9 @@ void swiAcceleration(UArg arg) {
 }
 
 // Interrupt when temp, or acceleration threshold reached
-static void callbackTriggerEStop(unsigned int index) {
+void callbackTriggerTempEStop(unsigned int index) {
     eStopMotor();
+    TMP107_AlertOverClear(uartMotor);
 }
 
 ///////////**************??????????????
@@ -267,14 +269,14 @@ bool initMotorTemp(uint16_t thresholdTemp) {
     // Initialise UART
     uartMotor = initMotorUart();
     TMP107_Init(uartMotor);
-    char motorAddr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
+    motorAddr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
     int device_count = TMP107_Decode5bitAddress(motorAddr);
 
     TMP107_Set_Config(uartMotor, motorAddr);
 
     // Setup TMP107 interrupt on Q1 for crossing user defined threshold
     GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_INPUT | GPIO_FALLING_EDGE);
-    GPIO_setCallback(Board_TMP107_INT, callbackTriggerEStop);
+    GPIO_setCallback(Board_TMP107_INT, callbackTriggerTempEStop);
     GPIO_enableInt(Board_TMP107_INT);
     setThresholdTemp(thresholdTemp);
 
@@ -293,7 +295,6 @@ bool initMotorTemp(uint16_t thresholdTemp) {
     taskParams.stackSize = 512;
     taskParams.priority = 11;
     taskParams.stack = &taskMotorTempStack;
-    taskParams.arg0 = motorAddr;
     Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
     if (motorTempTask == NULL) {
         System_printf("Task - MOTOR TEMP FAILED SETUP");
@@ -410,29 +411,30 @@ uint8_t getAcceleration() {
 }
 
 void setThresholdTemp(uint8_t thresholdTemp) {
-//    // TODO Update TMP107 with new limit...
-//    // Build TMP107 alert packet
-//    char tx_size = 3;
-//    char rx_size = 2;
-//    char tx[3];
-//    char rx[2];
+    // Update TMP107 with user limit
+    char tx_size = 5;
+    char rx_size = 2;
+    char tx[5];
+    char rx[2];
 
-//
-//    //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
-//    tx[0] = 0x55; // Calibration Byte
-//    tx[1] = TMP107_Read_bit;
-//    tx[2] = TMP107_Temp_reg;
-//
-//    // Transmit global temperature read command
-//    TMP107_Transmit((UART_Handle)uartMotor, tx, tx_size);
-//    // Master cannot transmit again until after we've received
-//    // the echo of our transmit and given the TMP107 adequate
-//    // time to reply. thus, we wait.
-//    // Copy the response from TMP107 into user variable
-//    TMP107_WaitForEcho((UART_Handle)uartMotor, tx_size, rx, rx_size);
+    tx[0] = 0x55; // Calibration Byte
+    tx[1] = motorAddr;
+    tx[2] = TMP107_High_Limit_reg;
 
-    // Global alert clear.
-    //TMP107_AlertOverClear(uartMotor);
+    uint16_t encoded = (uint16_t) ((float)thresholdTemp / 0.015625);
+    uint16_t reversed = reverseBits(encoded);
+    char high_byte = ((uint16_t)reversed >> 8) & 0xFF;
+    char low_byte = ((uint16_t)reversed >> 0) & 0xFF;  // shift by 0 not needed, of course, just stylistic
+    tx[3] = high_byte; // Set threshold
+    tx[4] = low_byte; // Set threshold
+
+    // Transmit global temperature read command
+    TMP107_Transmit((UART_Handle)uartMotor, tx, tx_size);
+    // Master cannot transmit again until after we've received
+    // the echo of our transmit and given the TMP107 adequate
+    // time to reply. thus, we wait.
+    // Copy the response from TMP107 into user variable
+    TMP107_WaitForEcho((UART_Handle)uartMotor, tx_size, rx, rx_size);
 }
 
 void setThresholdCurrent(uint16_t thresholdCurrent) {
