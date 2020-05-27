@@ -87,13 +87,13 @@ void startMotor(int rpm) {
 }
 
 void eStopMotor() {
-    setDesiredSpeed(0);
     estop = true;
     motor_on = false;
 }
 
 void stopMotor_api() {
-    setDesiredSpeed(0);
+    //motor_on = false;
+    eStopMotor();
 }
 
 void setDesiredSpeed(int rpm) {
@@ -125,24 +125,29 @@ void checkSpeedSwi() {
 
     // estop
     if (estop) {
-        if (accel_speed >= desired_speed_rpm) {
+        if (accel_speed >= 0) {
             accel_speed -= ESTOP_DECCEL_PER_TICK;
             if (speed_rpm <= 0) {
                 stopMotor(true);
-                // motor_on already set to false earlier in estop
             }
         }
     }
 
     // Accelerate/decelerate
-    if (motor_on) {
+    else if (motor_on) {
         if (accel_speed < desired_speed_rpm) {
             accel_speed += ACCEL_PER_TICK;
         } else if (accel_speed >= desired_speed_rpm) {
             accel_speed -= DECCEL_PER_TICK;
             if (speed_rpm <= 0) {
                 stopMotor(true);
-                motor_on = false;
+            }
+        }
+    } else {
+        if (accel_speed >= 0) {
+            accel_speed -= DECCEL_PER_TICK;
+            if (speed_rpm <= 0) {
+                stopMotor(true);
             }
         }
     }
