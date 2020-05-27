@@ -42,204 +42,11 @@ Semaphore_Struct semMotorTempStruct;
 Semaphore_Handle semMotorTempHandle;
 
 // Recurring SWI stuff
-Clock_Params clkParams;
+Clock_Params clkSensorParams;
 Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
-
-// Function prototypes that are not in the .h (deliberately)
-bool initLight();
-bool initBoardTemp();
-bool initMotorTemp(uint8_t threshTemp);
-bool initCurrent(uint16_t threshCurrent);
-bool initAcceleration(uint16_t threshAccel);
-void swiLight(UArg arg);
-void taskLight(UArg handle);
-void swiBoardTemp(UArg arg);
-void swiMotorTemp(UArg arg);
-void taskMotorTemp(UArg uartMotor, UArg motor_addr);
-void swiCurrent(UArg arg);
-void swiAcceleration(UArg arg);
-
-///////////**************??????????????
-// God tier make everything work fxn //
-///////////**************??????????????
-bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
-
-    // Used by separate init functions to create recurring SWIs. Period size is 1ms.
-    Clock_Params_init(&clkParams);
-    clkParams.startFlag = TRUE;
-
-    initLight();
-    //initBoardTemp();
-    initMotorTemp(threshTemp);
-    initCurrent(threshCurrent);
-    //initAcceleration(threshAccel);
-    return 1;
-}
-
-///////////**************??????????????
-//   Implementations sensor setups   //
-///////////**************??????????????
-// LIGHT SETUP
-bool initLight() {
-    // Set up I2C
-    I2C_Params i2cParams;
-    I2C_Params_init(&i2cParams);
-    i2cParams.bitRate = I2C_400kHz;
-    I2C_Handle lighti2c = I2C_open(Board_I2C2, &i2cParams);
-    if (!lighti2c) {
-        System_printf("Light I2C did not open\n");
-        System_flush();
-    }
-
-    bool status = sensorOpt3001Test(lighti2c);
-    while (!status) {
-        System_printf("OPT3001 test failed, retrying\n");
-        System_flush();
-        status = sensorOpt3001Test(lighti2c);
-    }
-    sensorOpt3001Init(lighti2c);
-    sensorOpt3001Enable(lighti2c, true);
-
-    // Create task that reads light sensor
-    // This retarded elaborate: swi - sem - task setup
-    // is needed cause the read function doesn't work in a swi
-    // yet still need the stupid recurringness a clock swi gives.
-    Semaphore_Params semParams;
-    Semaphore_Params_init(&semParams);
-    semParams.mode = Semaphore_Mode_BINARY;
-    Semaphore_construct(&semLightStruct, 0, &semParams);
-    semLightHandle = Semaphore_handle(&semLightStruct);
-
-    Task_Params taskParams;
-    Task_Params_init(&taskParams);
-    taskParams.stackSize = 512;
-    taskParams.priority = 12;
-    taskParams.stack = &taskLightStack;
-    taskParams.arg0 = lighti2c; // Yo compiler, watch me assign it then cast it back
-    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
-    if (lightTask == NULL) {
-        System_printf("Task - LIGHT FAILED SETUP");
-        System_flush();
-        status = 0;
-    }
-
-    // Create a recurring 2Hz SWI swi_light to post semaphore
-    clkParams.period = 500;
-    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkParams);
-
-    if (status) {
-        System_printf("Light setup\n");
-        System_flush();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// TEMPERATURE SETUP
-bool initBoardTemp() {
-    // Create a recurring 2Hz SWI swi_temp
-    clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkParams);
-
-    // TODO Setup UART connection for board TMP107
-    // TODO Setup board TMP107 temperature sensor
-
-    return true;
-}
-
-bool initMotorTemp(uint8_t threshTemp) {
-    // Initialise
-    UART_Handle uartMotor = init_motor_uart();
-    TMP107_Init(uartMotor);
-    char motor_tmp107_addr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
-    int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
-
-    // TODO Setup interrupt for crossing threshold
-    setThresholdTemp(threshTemp);
-
-    // Create task that reads temp sensor
-    // This retarded elaborate: swi - sem - task setup
-    // is needed cause the read function doesn't work in a swi
-    // yet still need the stupid recurringness a clock swi gives.
-    Semaphore_Params semParams;
-    Semaphore_Params_init(&semParams);
-    semParams.mode = Semaphore_Mode_BINARY;
-    Semaphore_construct(&semMotorTempStruct, 0, &semParams);
-    semMotorTempHandle = Semaphore_handle(&semMotorTempStruct);
-
-    Task_Params taskParams;
-    Task_Params_init(&taskParams);
-    taskParams.stackSize = 512;
-    taskParams.priority = 12;
-    taskParams.stack = &taskMotorTempStack;
-    taskParams.arg0 = uartMotor; // Yo compiler, watch me assign it then cast it back
-    taskParams.arg1 = motor_tmp107_addr;
-    Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
-    if (motorTempTask == NULL) {
-        System_printf("Task - MOTOR TEMP FAILED SETUP");
-        System_flush();
-        return false;
-    }
-
-    // Create a recurring 2Hz SWI swi_temp
-    clkParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkParams);
-
-    System_printf("Temperature setup on device: \n", device_count);
-    System_flush();
-    return true;
-}
-
-// CURRENT SETUP
-bool initCurrent(uint16_t threshCurrent) {
-    setThresholdCurrent(threshCurrent);
-
-    // Current sensors B and C on ADCs, A is not and thus not done.
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
-
-    // Current sensor B on D7 with ADC channel 4
-    GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
-    ADCSequenceConfigure(ADC1_BASE, ADC_SEQB, ADC_TRIGGER_PROCESSOR, ADC_PRI);
-    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQB, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
-    ADCSequenceEnable(ADC1_BASE, ADC_SEQB);
-    ADCIntClear(ADC1_BASE, ADC_SEQB);
-
-    // Current sensor C on E3 with ADC channel 0
-    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
-    ADCSequenceConfigure(ADC1_BASE, ADC_SEQC, ADC_TRIGGER_PROCESSOR, ADC_PRI);
-    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END);
-    ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
-    ADCIntClear(ADC1_BASE, ADC_SEQC);
-
-    clkParams.period = 4;
-    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkParams);
-
-    return true;
-}
-
-// ACCELERATION SETUP
-// Initialise sensors for acceleration on all three axes
-// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
-bool initAcceleration(uint16_t threshAccel) {
-    setThresholdAccel(threshAccel);
-
-    // Create a recurring 200Hz SWI swi_acceleration
-    clkParams.period = 5;
-    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkParams);
-
-    // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
-
-    // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
-
-    System_printf("Acceleration setup\n");
-    System_flush();
-
-    return true;
-}
 
 ///////////**************??????????????
 // Implementations of SWI functions  //
@@ -266,13 +73,13 @@ void taskLight(UArg i2c_handle) {
     }
 }
 
-// Read and filter motor temperature sensors over UART
+// Read and filter motor temperature (TMP007) sensor over UART
 void swiBoardTemp(UArg arg) {
     // TODO read board temperature via UART
     // Probably copy swiMotorTemp
 }
 
-// Read and filter motor temperature sensors over UART
+// Read and filter motor temperature (TMP107) sensor over UART
 void swiMotorTemp(UArg arg) {
     // On sensor booster pack
     Semaphore_post(semMotorTempHandle);
@@ -376,6 +183,185 @@ void swiAcceleration(UArg arg) {
 // Accelerometer interrupt when crash threshold reached
 void callbackAccelerometer(UArg arg) {
     eStopMotor();
+}
+
+///////////**************??????????????
+//   Implementations sensor setups   //
+///////////**************??????????????
+// LIGHT SETUP
+bool initLight() {
+    // Set up I2C
+    I2C_Params i2cParams;
+    I2C_Params_init(&i2cParams);
+    i2cParams.bitRate = I2C_400kHz;
+    I2C_Handle lighti2c = I2C_open(Board_I2C2, &i2cParams);
+    if (!lighti2c) {
+        System_printf("Light I2C did not open\n");
+        System_flush();
+    }
+
+    bool status = sensorOpt3001Test(lighti2c);
+    while (!status) {
+        System_printf("OPT3001 test failed, retrying\n");
+        System_flush();
+        status = sensorOpt3001Test(lighti2c);
+    }
+    sensorOpt3001Init(lighti2c);
+    sensorOpt3001Enable(lighti2c, true);
+
+    // Create task that reads light sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semLightStruct, 0, &semParams);
+    semLightHandle = Semaphore_handle(&semLightStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskLightStack;
+    taskParams.arg0 = lighti2c; // Yo compiler, watch me assign it then cast it back
+    Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
+    if (lightTask == NULL) {
+        System_printf("Task - LIGHT FAILED SETUP");
+        System_flush();
+        status = 0;
+    }
+
+    // Create a recurring 2Hz SWI swi_light to post semaphore
+    clkSensorParams.period = 500;
+    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkSensorParams);
+
+    if (status) {
+        System_printf("Light setup\n");
+        System_flush();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// TEMPERATURE SETUP
+bool initBoardTemp() {
+    // Create a recurring 2Hz SWI swi_temp
+    clkSensorParams.period = 500;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkSensorParams);
+
+    // TODO Setup UART connection for board TMP107
+    // TODO Setup board TMP107 temperature sensor
+
+    return true;
+}
+
+bool initMotorTemp(uint16_t threshTemp) {
+    // Initialise UART
+    UART_Handle uartMotor = init_motor_uart();
+    TMP107_Init(uartMotor);
+    char motor_tmp107_addr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
+    int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
+
+    // TODO Setup interrupt for crossing threshold
+    setThresholdTemp(threshTemp);
+
+    // Create task that reads temp sensor
+    // This retarded elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the stupid recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semMotorTempStruct, 0, &semParams);
+    semMotorTempHandle = Semaphore_handle(&semMotorTempStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 12;
+    taskParams.stack = &taskMotorTempStack;
+    taskParams.arg0 = uartMotor; // Yo compiler, watch me assign it then cast it back
+    taskParams.arg1 = motor_tmp107_addr;
+    Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
+    if (motorTempTask == NULL) {
+        System_printf("Task - MOTOR TEMP FAILED SETUP");
+        System_flush();
+        return false;
+    }
+
+    // Create a recurring 2Hz SWI swi_temp
+    clkSensorParams.period = 500;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkSensorParams);
+
+    System_printf("Temperature setup on device: \n", device_count);
+    System_flush();
+    return true;
+}
+
+// CURRENT SETUP
+bool initCurrent(uint16_t threshCurrent) {
+    setThresholdCurrent(threshCurrent);
+
+    // Current sensors B and C on ADCs, A is not and thus not done.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
+
+    // Current sensor B on D7 with ADC channel 4
+    GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_7);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQB, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQB, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH4 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQB);
+    ADCIntClear(ADC1_BASE, ADC_SEQB);
+
+    // Current sensor C on E3 with ADC channel 0
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+    ADCSequenceConfigure(ADC1_BASE, ADC_SEQC, ADC_TRIGGER_PROCESSOR, ADC_PRI);
+    ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END);
+    ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
+    ADCIntClear(ADC1_BASE, ADC_SEQC);
+
+    clkSensorParams.period = 4;
+    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkSensorParams);
+
+    return true;
+}
+
+// ACCELERATION SETUP
+// Initialise sensors for acceleration on all three axes
+// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
+bool initAcceleration(uint16_t threshAccel) {
+    setThresholdAccel(threshAccel);
+
+    // Create a recurring 200Hz SWI swi_acceleration
+    clkSensorParams.period = 5;
+    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkSensorParams);
+
+    // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
+
+    // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
+
+    System_printf("Acceleration setup\n");
+    System_flush();
+
+    return true;
+}
+
+///////////**************??????????????
+// God tier make everything work fxn //
+///////////**************??????????????
+bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAccel) {
+
+    // Used by separate init functions to create recurring SWIs. Period size is 1ms.
+    Clock_Params_init(&clkSensorParams);
+    clkSensorParams.startFlag = TRUE;
+
+//    initLight();
+//    //initBoardTemp();
+//    initMotorTemp(threshTemp);
+//    initCurrent(threshCurrent);
+    //initAcceleration(threshAccel);
+    return 1;
 }
 
 ///////////**************??????????????
