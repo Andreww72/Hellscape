@@ -125,8 +125,8 @@ void userInterfaceFxn(UArg ui32SysClock) {
 }
 
 void sensorsFxn(UArg arg0) {
-    // Threshold integer parameters: degrees C, mA, m/s^2
-    if (!initSensors(30, 1000, 1)) {
+    // Default threshold integer parameters: degrees C, mA, m/s^2
+    if (!initSensors(30, 1000, 40)) {
         System_abort("Failed sensor init");
         System_flush();
     }
@@ -170,7 +170,7 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     return 1;
 }
 
- int main(void) {
+int main(void) {
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
