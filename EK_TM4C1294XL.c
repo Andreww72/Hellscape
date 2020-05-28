@@ -297,6 +297,8 @@ GPIO_PinConfig gpioPinConfigs[] = {
     GPIOTiva_PH_2,
     /* EK_TM4C1294XL_HALL_C */
     GPIOTiva_PN_2,
+    /* TMP107_INT */
+    GPIOTiva_PQ_1,
 
     /* Output pins */
     /* EK_TM4C1294XL_USR_D1 */

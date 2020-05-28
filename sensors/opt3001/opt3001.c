@@ -25,7 +25,7 @@
  **************************************************************************************************/
 bool sensorOpt3001Init(I2C_Handle i2c) {
 	sensorOpt3001Enable(i2c, false);
-	return (true);
+	return true;
 }
 
 
@@ -76,33 +76,25 @@ void sensorOpt3001Enable(I2C_Handle i2c, bool enable) {
  * @return      TRUE if valid data
  **************************************************************************************************/
 bool sensorOpt3001Read(I2C_Handle i2c, uint16_t *rawData) {
-
 	bool success;
 	uint16_t val;
 
 	success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val);
 
-	if (success)
-	{
+	if (success) {
 		success = (val & DATA_RDY_BIT) == DATA_RDY_BIT;
 	}
 
-	if (success)
-	{
+	if (success) {
 		success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val);
 	}
 
-	if (success)
-	{
+	if (success) {
 		// Swap bytes
 		*rawData = (val << 8) | (val>>8 &0xFF);
 	}
-	else
-	{
-		//	  sensorSetErrorData
-	}
 
-	return (success);
+	return success;
 }
 
 /**************************************************************************************************
@@ -119,21 +111,19 @@ bool sensorOpt3001Test(I2C_Handle i2c) {
 	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_MANUFACTURER_ID, (uint8_t *)&val);
 	val = (val << 8) | (val>>8 &0xFF);
 
-	if (val != MANUFACTURER_ID)
-	{
-		return (false);
+	if (val != MANUFACTURER_ID) {
+		return false;
 	}
 
 	// Check device ID
 	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_DEVICE_ID, (uint8_t *)&val);
 	val = (val << 8) | (val>>8 &0xFF);
 
-	if (val != DEVICE_ID)
-	{
-		return (false);
+	if (val != DEVICE_ID) {
+		return false;
 	}
 
-	return (true);
+	return true;
 }
 
 /**************************************************************************************************

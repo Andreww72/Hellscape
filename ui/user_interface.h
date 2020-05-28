@@ -64,6 +64,7 @@ static void increaseSetting();
 static void decreaseSetting();
 
 static void StartStopMotor();
+void eStopGUI();
 
 static void setupGraphScreen(char * title, int yMin, int yMax);
 static void DrawDataOnGraph(uint32_t last_sample);

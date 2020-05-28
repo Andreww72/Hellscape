@@ -1,6 +1,7 @@
 #ifndef SENSORS_SENSOR_PORTS_H_
 #define SENSORS_SENSOR_PORTS_H_
 
+// OPT3001 addresses
 /* Slave address */
 #define OPT3001_I2C_ADDRESS             0x47
 

@@ -48,8 +48,8 @@
 #include "motor/motor_api.h"
 #include "sensors/sensor_api.h"
 
-#define UI_TASKSTACKSIZE 2048
-#define SE_TASKSTACKSIZE 2048
+#define UI_TASKSTACKSIZE 4096
+#define SE_TASKSTACKSIZE 4096
 
 Char taskUiStack[UI_TASKSTACKSIZE];
 Char taskSeStack[SE_TASKSTACKSIZE];
@@ -94,24 +94,8 @@ void DrawDateTime() {
     }
 }
 
-void userInterfaceFxn(UArg arg0, UArg arg1) {
+void userInterfaceFxn(UArg ui32SysClock) {
 
-    UserInterfaceInit(arg0, &sContext);
-
-    while(1) {
-        UserInterfaceDraw(&sContext);
-        DrawDateTime();
-    }
-}
-
-void sensorsFxn(UArg arg0) {
-    if (!initSensors(40, 1, 1)) {
-        System_abort("Failed sensor init");
-        System_flush();
-    }
-}
-
-bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     // Need this for Touchscreen
     Hwi_Params hwiParams;
     Hwi_Params_init(&hwiParams);
@@ -132,6 +116,23 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
         t1 = 3798880499;
     }
 
+    UserInterfaceInit(ui32SysClock, &sContext);
+
+    while(1) {
+        UserInterfaceDraw(&sContext);
+        DrawDateTime();
+    }
+}
+
+void sensorsFxn(UArg arg0) {
+    // Default threshold integer parameters: degrees C, mA, m/s^2
+    if (!initSensors(30, 1000, 40)) {
+        System_abort("Failed sensor init");
+        System_flush();
+    }
+}
+
+bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     // Init sensor setup task
     Task_Params taskParams;
     Task_Params_init(&taskParams);

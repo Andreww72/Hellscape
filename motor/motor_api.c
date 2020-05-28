@@ -92,8 +92,7 @@ void eStopMotor() {
 }
 
 void stopMotor_api() {
-    //motor_on = false;
-    eStopMotor();
+    motor_on = false;
 }
 
 void setDesiredSpeed(int rpm) {

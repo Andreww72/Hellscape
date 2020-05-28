@@ -51,10 +51,12 @@ uint32_t maxGraph;
 // Get sContext for empty_min.c externally
 extern tContext sContext;
 extern bool shouldDrawDataOnGraph;
+int motorState = 0;
+int homeScreenFlag = 1;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {50, 1000, 50, 50}; /* Write struct */
-uint32_t e2prom_read_settings[4] =  {0, 1000, 0, 0}; /* Read struct */
+uint32_t e2prom_write_settings[4] = {30, 1000, 1000, 40}; /* Write struct: Temp | Speed | Current | Accel */
+uint32_t e2prom_read_settings[4] =  {30, 1000, 1000, 40}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -227,6 +229,7 @@ void removeAllWidgets() {
     WidgetRemove((tWidget *)(&g_sMenuGraphPage));
     WidgetRemove((tWidget *)(&g_sSettingPage));
     WidgetRemove((tWidget *)(&g_sGraphPage));
+    homeScreenFlag = 0;
 }
 
 // Draws the home screen
@@ -235,6 +238,7 @@ static void DrawHomeScreen()
     removeAllWidgets();
     WidgetPaint((tWidget *) &g_sMenuTypePage);
     WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sMenuTypePage);
+    homeScreenFlag = 1;
 }
 
 // Draws the setting menu
@@ -267,7 +271,7 @@ static void DrawTemperatureSettingsPage()
 {
     settingsPageIdentifier = temperature;
     removeAllWidgets();
-    DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
+    DrawSettingsParameters("Temperature Limit", "Celsius", motorTemperatureLimit);
     WidgetPaint((tWidget *) &g_sSettingPage);
     WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sSettingPage);
 }
@@ -285,7 +289,7 @@ static void DrawCurrentSettingsPage()
 {
     settingsPageIdentifier = current;
     removeAllWidgets();
-    DrawSettingsParameters("Current Limit", "Amps", motorCurrentLimit);
+    DrawSettingsParameters("Current Limit", "Milliamps", motorCurrentLimit);
     WidgetPaint((tWidget *) &g_sSettingPage);
     WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sSettingPage);
 }
@@ -305,7 +309,7 @@ static void doChangeToSetting(int amount) {
             motorTemperatureLimit += amount;
             e2prom_write_settings[0] = motorTemperatureLimit;
             writeToEEPROM();
-            DrawSettingsParameters("Temperature Limit", "Celcius", motorTemperatureLimit);
+            DrawSettingsParameters("Temperature Limit", "Celsius", motorTemperatureLimit);
             break;
         case motor:
             motorSpeedLimit += amount;
@@ -323,7 +327,7 @@ static void doChangeToSetting(int amount) {
             motorCurrentLimit += amount;
             e2prom_write_settings[2] = motorCurrentLimit;
             writeToEEPROM();
-            DrawSettingsParameters("Current Limit", "Amps", motorCurrentLimit);
+            DrawSettingsParameters("Current Limit", "Milliamps", motorCurrentLimit);
             break;
         case acceleration:
             motorAccelerationLimit += amount;
@@ -339,9 +343,21 @@ static void doChangeToSetting(int amount) {
 static void increaseSetting() {
     switch (settingsPageIdentifier) {
         case motor:
-            if (motorSpeedLimit < 6000) {
+            if (motorSpeedLimit <= 5900) {
                 doChangeToSetting(100);
             }
+            break;
+        case temperature:
+            doChangeToSetting(1);
+            setThresholdTemp((uint16_t)motorTemperatureLimit);
+            break;
+        case current:
+            doChangeToSetting(50);
+            setThresholdCurrent((uint16_t)motorCurrentLimit);
+            break;
+        case acceleration:
+            doChangeToSetting(5);
+            setThresholdAccel((uint16_t)motorAccelerationLimit);
             break;
         default:
             doChangeToSetting(5);
@@ -351,8 +367,26 @@ static void increaseSetting() {
 static void decreaseSetting() {
     switch (settingsPageIdentifier) {
         case motor:
-            if (motorSpeedLimit > 200) {
+            if (motorSpeedLimit >= 300) {
                 doChangeToSetting(-100);
+            }
+            break;
+        case temperature:
+            if (motorTemperatureLimit >= 1) {
+                doChangeToSetting(-1);
+                setThresholdTemp((uint16_t)motorTemperatureLimit);
+            }
+            break;
+        case current:
+            if (motorCurrentLimit >= 50) {
+                doChangeToSetting(-50);
+                setThresholdTemp((uint16_t)motorTemperatureLimit);
+            }
+            break;
+        case acceleration:
+            if (motorAccelerationLimit > 0) {
+                doChangeToSetting(-5);
+                setThresholdTemp((uint16_t)motorAccelerationLimit);
             }
             break;
         default:
@@ -360,7 +394,6 @@ static void decreaseSetting() {
     }
 }
 
-int motorState = 0;
 static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
@@ -372,6 +405,17 @@ static void StartStopMotor() {
         stopMotor_api();
     }
     WidgetPaint((tWidget *) &g_sMotorOption);
+}
+
+void eStopGUI() {
+    if (motorState == 1) {
+        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "eStopped: Restart Motor");
+        motorState = 0;
+
+        if (homeScreenFlag) {
+            WidgetPaint((tWidget *) &g_sMotorOption);
+        }
+    }
 }
 
 static void drawPowerGraph()
@@ -529,6 +573,10 @@ void initSettingValues() {
     motorSpeedLimit = e2prom_read_settings[1];
     motorCurrentLimit = e2prom_read_settings[2];
     motorAccelerationLimit = e2prom_read_settings[3];
+
+    setThresholdTemp((uint16_t) motorTemperatureLimit); // Use Celsius
+    setThresholdCurrent((uint16_t) motorCurrentLimit); // Use mA
+    setThresholdAccel((uint16_t) motorAccelerationLimit); // Use m/s^2
 
     // Initially not drawing a graph
     drawingGraph = 0;
