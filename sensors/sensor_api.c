@@ -74,7 +74,7 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAcc
     initLight();
     //initBoardTemp();
     //initMotorTemp(threshTemp);
-    initCurrent(threshCurrent);
+    //initCurrent(threshCurrent);
     //initAcceleration(threshAccel);
     return 1;
 }
@@ -154,7 +154,7 @@ bool initBoardTemp() {
 bool initMotorTemp(uint8_t threshTemp) {
     // Initialise
     init_motor_uart();
-    TMP107_Init();
+    //TMP107_Init();
     char motor_tmp107_addr = TMP107_LastDevicePoll(); // motor_addr var will be a backwards 5 bit
     int device_count = TMP107_Decode5bitAddress(motor_tmp107_addr);
 
@@ -389,11 +389,11 @@ float getLight() {
     return (sum / (float)windowLight);
 }
 
-uint8_t getBoardTemp() {
+float getBoardTemp() {
     return 25;
 }
 
-uint8_t getMotorTemp() {
+float getMotorTemp() {
     return 25;
 }
 
@@ -408,7 +408,7 @@ float getCurrent() {
     return ((sum / (float)windowCurrent) * 3.0 / 2.0);
 }
 
-uint8_t getAcceleration() {
+float getAcceleration() {
     return 1;
 }
 

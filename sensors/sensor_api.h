@@ -31,8 +31,8 @@ bool initSensors(uint16_t threshTemp, uint16_t threshCurrent, uint16_t threshAcc
 float getLight();
 
 // Read and filter board and motor temperature sensors over UART
-uint8_t getBoardTemp();
-uint8_t getMotorTemp();
+float getBoardTemp();
+float getMotorTemp();
 
 // Read and filter two motor phase currents via analogue signals on the current sensors
 // Just have the 'total' available for external.
@@ -40,7 +40,7 @@ float getCurrent();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
-uint8_t getAcceleration();
+float getAcceleration();
 
 // Update threshold values that trigger an eStop
 void setThresholdTemp(uint8_t threshTemp);

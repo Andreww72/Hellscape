@@ -112,6 +112,10 @@ int getSpeed() {
     return return_val;
 }
 
+float getSpeedFloat() {
+    return (float) getSpeed();
+}
+
 // Clock Swi for motor control
 void checkSpeedSwi() {
     UInt key;
