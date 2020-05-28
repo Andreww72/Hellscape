@@ -174,7 +174,7 @@ void swiCurrent(UArg arg) {
     // Save power for graphing
     static uint8_t powerHead = 0;
     // P = V * I     using avg of the voltages
-    float power = current * (V_OutC + V_OutC) / 2;
+    float power = current * ((V_OutB + V_OutC) / 2);
     powerBuffer[powerHead++] = power;
     powerHead %= windowCurrent; // windowCurrent deliberate
 
@@ -192,7 +192,8 @@ void swiCurrent(UArg arg) {
         }
         float avgCurrent = sum / windowCurrent;
 
-        //System_printf("Current: %f\n", avgCurrent);
+        //System_printf("C: %f\n", avgCurrent);
+        //System_printf("V: %f %f\n", V_OutB, V_OutC);
         //System_flush();
 
         if (avgCurrent > glThresholdCurrent) {
