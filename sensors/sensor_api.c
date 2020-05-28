@@ -118,9 +118,9 @@ void taskTemp() {
         motorTempBuffer[tempHead++] = motorTemp;
         tempHead %= windowTemp;
 
-//        System_printf("BTemp: %f\n", boardTemp);
-//        System_printf("MTemp: %f\n", motorTemp);
-//        System_flush();
+        //System_printf("BTemp: %f\n", boardTemp);
+        //System_printf("MTemp: %f\n", motorTemp);
+        //System_flush();
     }
 }
 
@@ -176,8 +176,9 @@ void swiCurrent(UArg arg) {
             sum += currentBuffer[i];
         }
         float avgCurrent = sum / windowCurrent;
-        System_printf("Current: %f\n", avgCurrent);
-        System_flush();
+
+        //System_printf("Current: %f\n", avgCurrent);
+        //System_flush();
 
         if (avgCurrent > glThresholdCurrent) {
             eStopMotor();
@@ -265,15 +266,19 @@ bool initLight() {
 bool initTemp(uint16_t thresholdTemp) {
     // Initialise UART
     uartTemp = TMP107_InitUart();
+
+    // Initialise daisy chain of two TMP107s
     boardTempAddr = TMP107_Init(uartTemp);
     motorTempAddr = TMP107_LastDevicePoll(uartTemp); // motor_addr var will be a backwards 5 bit
     int device_count = TMP107_Decode5bitAddress(motorTempAddr);
 
+    // Tell TMP107s to update in 500ms intervals
     TMP107_Set_Config(uartTemp, boardTempAddr);
     TMP107_Set_Config(uartTemp, motorTempAddr);
 
     // Setup TMP107 interrupt on Q1 for crossing user defined threshold
-    GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_INPUT | GPIO_BOTH_EDGES);
+    // GPIO_CFG_IN_PU
+    GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_IN_INT_FALLING | GPIO_FALLING_EDGE);
     GPIO_setCallback(Board_TMP107_INT, callbackTriggerTempEStop);
     GPIO_enableInt(Board_TMP107_INT);
     setThresholdTemp(thresholdTemp);
@@ -417,27 +422,26 @@ uint8_t getAcceleration() {
 void setThresholdTemp(uint8_t thresholdTemp) {
     // Update TMP107 with user limit
     char tx_size = 5;
-    char rx_size = 2;
+    char rx_size = 0;
     char tx[5];
-    char rx[2];
+    char rx[0];
 
     tx[0] = 0x55; // Calibration Byte
     tx[1] = motorTempAddr;
-    tx[2] = TMP107_High_Limit_reg;
+    tx[2] = TMP107_HL_reg;
 
     uint16_t encoded = (uint16_t) ((float)thresholdTemp / 0.015625);
-    uint16_t reversed = reverseBits(encoded);
-    char high_byte = ((uint16_t)reversed >> 8) & 0xFF;
-    char low_byte = ((uint16_t)reversed >> 0) & 0xFF;  // shift by 0 not needed, of course, just stylistic
-    tx[3] = high_byte; // Set threshold
-    tx[4] = low_byte; // Set threshold
+    uint16_t shifted = encoded << 2;
+    uint8_t low_byte = (shifted >> 0) & 0xFF;  // shift by 0 not needed, of course, just stylistic
+    uint8_t high_byte = (shifted >> 8) & 0xFF;
+    uint8_t reversed_low_byte = reverseBits(low_byte);
+    uint8_t reversed_high_byte = reverseBits(high_byte);
 
-    // Transmit global temperature read command
+    tx[3] = reversed_low_byte; // Set threshold
+    tx[4] = reversed_high_byte; // Set threshold
+
+    // Transmit new high limit
     TMP107_Transmit(uartTemp, tx, tx_size);
-    // Master cannot transmit again until after we've received
-    // the echo of our transmit and given the TMP107 adequate
-    // time to reply. thus, we wait.
-    // Copy the response from TMP107 into user variable
     TMP107_WaitForEcho(uartTemp, tx_size, rx, rx_size);
 }
 

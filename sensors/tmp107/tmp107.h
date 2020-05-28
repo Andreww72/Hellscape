@@ -20,6 +20,6 @@ void TMP107_AlertOverClear(UART_Handle uartMotor);
 float TMP107_DecodeTemperatureResult(int HByte, int LByte);
 unsigned char TMP107_Encode5bitAddress(unsigned char addr);
 unsigned char TMP107_Decode5bitAddress(unsigned char addr);
-uint16_t reverseBits(uint16_t num);
+uint8_t reverseBits(uint8_t num);
 
 #endif /* TMP107_H_ */

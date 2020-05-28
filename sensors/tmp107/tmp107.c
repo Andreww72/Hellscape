@@ -25,17 +25,18 @@ char TMP107_Init(UART_Handle uartMotor) {
 
 void TMP107_Set_Config(UART_Handle uartMotor, char motorAddr) {
     // Setup half second conversions in config register
-    char tx_size = 4;
-	char tx[4];
-    char rx2[0];
+    char tx_size = 5;
+	char tx[5];
+    char rx[0];
 
 	tx[0] = 0x55; // Calibration Byte
     tx[1] = motorAddr;
 	tx[2] = TMP107_Config_reg;
     // 1000000000000000
-	tx[3] = 0x1; // Set defaults except change to 500ms conversions
+	tx[3] = 0; // Set defaults except change to 500ms conversions
+	tx[4] = 0b00000001;
     TMP107_Transmit(uartMotor, tx, tx_size);
-    TMP107_WaitForEcho(uartMotor, tx_size, rx2, 0);
+    TMP107_WaitForEcho(uartMotor, tx_size, rx, 0);
 }
 
 char TMP107_LastDevicePoll(UART_Handle uartMotor) {
@@ -99,10 +100,10 @@ unsigned char TMP107_Decode5bitAddress(unsigned char addr) {
 	return out;
 }
 
-uint16_t reverseBits(uint16_t num) {
+uint8_t reverseBits(uint8_t num) {
 
-    uint16_t count = sizeof(num) * 8 - 1;
-    uint16_t reverse_num = num;
+    uint8_t count = sizeof(num) * 8 - 1;
+    uint8_t reverse_num = num;
     num >>= 1;
     while(num) {
         reverse_num <<= 1;
