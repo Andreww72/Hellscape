@@ -44,7 +44,7 @@ float getPower();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration
-uint8_t getAcceleration();
+float getAcceleration();
 
 // Update threshold values that trigger an eStop
 void setThresholdTemp(uint16_t thresholdTemp); // Use Celsius

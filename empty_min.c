@@ -56,7 +56,9 @@ Char taskSeStack[SE_TASKSTACKSIZE];
 tContext sContext;
 
 Clock_Struct clk0Struct;
+Clock_Struct clk1Struct;
 Clock_Handle clkHandle;
+Clock_Handle clkHandleGraph;
 
 bool shouldDrawDateTime = true;
 bool shouldDrawDataOnGraph = false;
@@ -81,8 +83,11 @@ static char * getCurrentDateTime() {
 
 void ClockFxn(UArg arg0) {
     shouldDrawDateTime = true;
-    shouldDrawDataOnGraph = true;
     t1++;
+}
+
+void shouldDrawDataClock(UArg arg0) {
+    shouldDrawDataOnGraph = true;
 }
 
 // Draws the date, time
@@ -167,6 +172,19 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
         return 0;
     }
     Clock_start(clkHandle);
+
+    Clock_Params clkParamsGraph;
+    Clock_Params_init(&clkParamsGraph);
+    clkParamsGraph.period = 500;
+    clkParamsGraph.startFlag = TRUE;
+    Clock_construct(&clk1Struct, (Clock_FuncPtr)shouldDrawDataClock, 1, &clkParamsGraph);
+    clkHandleGraph = Clock_handle(&clk1Struct);
+    if (clkHandleGraph == NULL) {
+        System_printf("Task - CLOCK SETUP FAILED");
+        System_flush();
+        return 0;
+    }
+    Clock_start(clkHandleGraph);
     return 1;
 }
 

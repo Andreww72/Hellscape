@@ -427,7 +427,7 @@ float getPower() {
     return (sum / (float)windowCurrent);
 }
 
-uint8_t getAcceleration() {
+float getAcceleration() {
     return 1;
 }
 

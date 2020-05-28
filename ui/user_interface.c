@@ -18,6 +18,8 @@
 #include "motor/motor_api.h"
 #include "driverlib/eeprom.h"
 #include "driverlib/sysctl.h"
+#include "../sensors/sensor_api.h"
+#include "../motor/motor_api.h"
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
@@ -31,7 +33,7 @@
 #define MOTOR_TEMP_VAL_LOW 0
 #define MOTOR_TEMP_VAL_HIGH 100
 #define LIGHT_VAL_LOW 0
-#define LIGHT_VAL_HIGH 100
+#define LIGHT_VAL_HIGH 500
 
 // EEPROM
 #define E2PROM_ADRES 0x0000
@@ -485,7 +487,36 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     GrStringDraw(&sContext, lowLimit, -1, 10, 202, false);
     GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
+    // Get pointer to data we want to be drawing
+    float (*data_ptr)();
+    if (graphPageIdentifier == powerGraph){
+        data_ptr = &getCurrent;
+    } else if (graphPageIdentifier == ambTempGraph) {
+        data_ptr = &getBoardTemp;
+    } else if (graphPageIdentifier == speedGraph) {
+        data_ptr = &getSpeedFloat;
+    } else if (graphPageIdentifier == accelerationGraph) {
+        data_ptr = &getAcceleration;
+    } else if (graphPageIdentifier == motorTempGraph) {
+        data_ptr = &getMotorTemp;
+    } else if (graphPageIdentifier == lightGraph) {
+        data_ptr = &getLight;
+    }
+
+    // Status to indicate continue drawing graph
     drawingGraph = 1;
+
+    // Draw to
+    while (drawingGraph) {
+        // Only draw periodically
+        if (shouldDrawDataOnGraph) { // updated in shouldDrawDataClock() every period
+            DrawDataOnGraph((float) (*data_ptr)());
+            shouldDrawDataOnGraph = false;
+        }
+
+        // Continue to process
+        WidgetMessageQueueProcess();
+    }
     // AddValueToGraph(50, powerGraph);
     // AddValueToGraph(50, powerGraph);
     // DrawDataOnGraph(yMin, yMax, rand() % 100);
@@ -509,7 +540,7 @@ float float_rand( float min, float max )
     return min + scale * ( max - min );      /* [min, max] */
 }
 
-static void DrawDataOnGraph(uint32_t lastSample)
+static void DrawDataOnGraph(float lastSample)
 {
     if (pointsCount == MAX_PLOT_SAMPLES){
         // Reset graph
@@ -521,7 +552,7 @@ static void DrawDataOnGraph(uint32_t lastSample)
 
     // Draw current value
     static char currentValue[30];
-    sprintf(currentValue, "%d", lastSample);
+    sprintf(currentValue, "%f", lastSample);
     GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);

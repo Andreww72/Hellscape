@@ -67,7 +67,7 @@ static void StartStopMotor();
 void eStopGUI();
 
 static void setupGraphScreen(char * title, int yMin, int yMax);
-static void DrawDataOnGraph(uint32_t last_sample);
+static void DrawDataOnGraph(float lastSample);
 static void returnFromGraph();
 static void drawPowerGraph();
 static void drawAmbientTemperatureGraph();

@@ -50,6 +50,11 @@ void setDesiredSpeed(int rpm);
  */
 int getSpeed();
 
+/**
+ * Get the speed of the motor in RPM (float).
+ */
+float getSpeedFloat();
+
 
 
 
