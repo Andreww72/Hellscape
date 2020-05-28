@@ -34,7 +34,6 @@ int accel_speed = 0;
 int cum_speed_error = 0;
 int rpm_buffer[BUFFER_SIZE];
 int rpm_index = 0;
-int executions = 0;
 bool motor_on = false;
 bool estop = false;
 
@@ -120,13 +119,6 @@ float getSpeedFloat() {
 void checkSpeedSwi() {
     UInt key;
     key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
-
-//    executions++;
-//    if (executions == 300) {
-//        System_printf("%d %d\n", speed_rpm, accel_speed);
-//        System_flush();
-//        executions = 0;
-//    }
 
     // If we're trying to accelerate, give the motor another lil push
     // Courtesy of friction, sometimes the bastard just won't start
