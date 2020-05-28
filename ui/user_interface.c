@@ -374,6 +374,17 @@ static void StartStopMotor() {
     WidgetPaint((tWidget *) &g_sMotorOption);
 }
 
+void StartStopGUI() {
+    if (motorState == 0) {
+        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
+        motorState = 1;
+    } else {
+        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "eStopped, Restart Motor");
+        motorState = 0;
+    }
+    WidgetPaint((tWidget *) &g_sMotorOption);
+}
+
 static void drawPowerGraph()
 {
     graphPageIdentifier = powerGraph;
