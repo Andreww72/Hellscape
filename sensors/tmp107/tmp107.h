@@ -7,6 +7,7 @@
 
 #define TMP107_Timeout			40
 #define TMP107_AddrInitTimeout	1250
+#define TMP107_RESOLUTION       0.015625
 
 /* Command Byte */
 #define TMP107_Read_bit			0x2
@@ -20,6 +21,6 @@ void TMP107_AlertOverClear(UART_Handle uartMotor);
 float TMP107_DecodeTemperatureResult(int HByte, int LByte);
 unsigned char TMP107_Encode5bitAddress(unsigned char addr);
 unsigned char TMP107_Decode5bitAddress(unsigned char addr);
-uint8_t reverseBits(uint8_t num);
+uint8_t reverse8Bits(uint8_t num);
 
 #endif /* TMP107_H_ */

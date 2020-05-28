@@ -32,9 +32,10 @@ void TMP107_Set_Config(UART_Handle uartMotor, char motorAddr) {
 	tx[0] = 0x55; // Calibration Byte
     tx[1] = motorAddr;
 	tx[2] = TMP107_Config_reg;
-    // 1000000000000000
-	tx[3] = 0; // Set defaults except change to 500ms conversions
-	tx[4] = 0b00000001;
+	// Set defaults except change to 500ms conversions
+	// 1000000000000000
+	tx[3] = 0; //0b00000000
+	tx[4] = 0b10000000;
     TMP107_Transmit(uartMotor, tx, tx_size);
     TMP107_WaitForEcho(uartMotor, tx_size, rx, 0);
 }
@@ -54,25 +55,11 @@ char TMP107_LastDevicePoll(UART_Handle uartMotor) {
     return retval;
 }
 
-void TMP107_AlertOverClear(UART_Handle uartMotor) {
-    // clear all Alert2
-    char tx_size = 2;
-    char rx_size = 0;
-    char tx[2];
-    char rx[0];
-
-    tx[0] = 0x55; // Calibration Byte
-    tx[1] = 0xB5; // GlobalAlertClear1 command code
-    TMP107_Transmit(uartMotor, tx, tx_size);
-    TMP107_WaitForEcho(uartMotor, tx_size, rx, rx_size);
-    // no need to RetrieveReadback
-}
-
 float TMP107_DecodeTemperatureResult(int HByte, int LByte) {
     // Convert raw byte response to floating point temperature
     int Bytes = HByte << 8 | LByte;
-    Bytes &= 0xFFFC; // Mask NVM bits not used in Temperature Result
-    float temperature = (float) Bytes / 256;
+    Bytes = Bytes >> 2; // Get that 14 bit thing without the weird two bits on the right
+    float temperature = (float) Bytes * TMP107_RESOLUTION;
     return temperature;
 }
 
@@ -100,7 +87,7 @@ unsigned char TMP107_Decode5bitAddress(unsigned char addr) {
 	return out;
 }
 
-uint8_t reverseBits(uint8_t num) {
+uint8_t reverse8Bits(uint8_t num) {
 
     uint8_t count = sizeof(num) * 8 - 1;
     uint8_t reverse_num = num;
@@ -114,3 +101,4 @@ uint8_t reverseBits(uint8_t num) {
     reverse_num <<= count;
     return reverse_num;
 }
+

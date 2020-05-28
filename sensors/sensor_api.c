@@ -28,6 +28,7 @@ float powerBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
 
 // Current thresholds that trigger eStop
+uint16_t glThresholdTemp = 30;
 float glThresholdCurrent = 1.0;
 uint16_t countCurrentTicks = 0;
 
@@ -97,12 +98,6 @@ void taskTemp() {
     tx[1] = TMP107_Global_bit | TMP107_Read_bit | motorTempAddr;
     tx[2] = TMP107_Temp_reg;
 
-    char tx_test[3];
-    char rx_test[2];
-    tx_test[0] = 0x55;
-    tx_test[1] = TMP107_Read_bit | motorTempAddr;
-    tx_test[2] = TMP107_Config_reg;
-
     while(1) {
         Semaphore_pend(semTempHandle, BIOS_WAIT_FOREVER);
 
@@ -120,14 +115,15 @@ void taskTemp() {
 
         // Variables for the ring buffer (not quite a ring buffer though)
         static uint8_t tempHead = 0;
-
         boardTempBuffer[tempHead] = boardTemp;
         motorTempBuffer[tempHead++] = motorTemp;
         tempHead %= windowTemp;
 
-        TMP107_Transmit(uartTemp, tx_test, 3);
-        TMP107_WaitForEcho(uartTemp, 3, rx_test, 2);
-        //System_printf("CF Reg: %d & %d\n", rx_test[0], rx_test[1]);
+        // Check if temperature threshold exceeded
+        if (motorTemp > glThresholdTemp) {
+            eStopMotor();
+            eStopGUI();
+        }
 
         //System_printf("BTemp: %f\n", boardTemp);
         //System_printf("MTemp: %f\n", motorTemp);
@@ -214,13 +210,6 @@ void swiAcceleration(UArg arg) {
     // ABS is calculated from those three in a getter
 }
 
-// Interrupt when temp, or acceleration threshold reached
-void callbackTriggerTempEStop(unsigned int index) {
-    eStopMotor();
-    eStopGUI();
-    TMP107_AlertOverClear(uartTemp);
-}
-
 ///////////**************??????????????
 //   Implementations sensor setups   //
 ///////////**************??????????????
@@ -294,13 +283,6 @@ bool initTemp(uint16_t thresholdTemp) {
     // Tell TMP107s to update in 500ms intervals
     TMP107_Set_Config(uartTemp, boardTempAddr);
     TMP107_Set_Config(uartTemp, motorTempAddr);
-
-    // Setup TMP107 interrupt on Q1 for crossing user defined threshold
-    // GPIO_CFG_IN_PU
-    GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_IN_INT_FALLING | GPIO_FALLING_EDGE);
-    GPIO_setCallback(Board_TMP107_INT, callbackTriggerTempEStop);
-    GPIO_enableInt(Board_TMP107_INT);
-    setThresholdTemp(thresholdTemp);
 
     // Create task that reads temp sensor
     // This retarded elaborate: swi - sem - task setup
@@ -449,30 +431,8 @@ uint8_t getAcceleration() {
     return 1;
 }
 
-void setThresholdTemp(uint8_t thresholdTemp) {
-    // Update TMP107 with user limit
-    char tx_size = 5;
-    char rx_size = 0;
-    char tx[5];
-    char rx[0];
-
-    tx[0] = 0x55; // Calibration Byte
-    tx[1] = motorTempAddr;
-    tx[2] = TMP107_HL_reg;
-
-    uint16_t encoded = (uint16_t) ((float)thresholdTemp / 0.015625);
-    uint16_t shifted = encoded << 2;
-    uint8_t low_byte = (shifted >> 0) & 0xFF;  // shift by 0 not needed, of course, just stylistic
-    uint8_t high_byte = (shifted >> 8) & 0xFF;
-    uint8_t reversed_low_byte = reverseBits(low_byte);
-    uint8_t reversed_high_byte = reverseBits(high_byte);
-
-    tx[3] = reversed_low_byte; // Set threshold
-    tx[4] = reversed_high_byte; // Set threshold
-
-    // Transmit new high limit
-    TMP107_Transmit(uartTemp, tx, tx_size);
-    TMP107_WaitForEcho(uartTemp, tx_size, rx, rx_size);
+void setThresholdTemp(uint16_t thresholdTemp) {
+    glThresholdTemp = thresholdTemp;
 }
 
 void setThresholdCurrent(uint16_t thresholdCurrent) {
