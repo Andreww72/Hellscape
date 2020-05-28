@@ -2,21 +2,21 @@
 
 char temp[1];
 
-UART_Handle initMotorUart() {
+UART_Handle TMP107_InitUart() {
     UART_Params uartParams;
     UART_Params_init(&uartParams);
     uartParams.readMode = UART_MODE_BLOCKING;
     uartParams.readReturnMode = UART_RETURN_FULL;
-    uartParams.readTimeout = TMP107_Timeout;
+    uartParams.readTimeout = TMP107_Timeout*2;
     uartParams.readEcho = UART_ECHO_OFF;
     uartParams.baudRate = 115200;
-    UART_Handle uartMotor = UART_open(Board_UART7, &uartParams);
+    UART_Handle uartTemp = UART_open(Board_UART7, &uartParams);
 
-    if (uartMotor == NULL) {
+    if (uartTemp == NULL) {
         System_printf("Error opening the motor temp UART");
         System_flush();
     }
-    return uartMotor;
+    return uartTemp;
 }
 
 void TMP107_Transmit(UART_Handle uartMotor, char* tx_data, char tx_size){

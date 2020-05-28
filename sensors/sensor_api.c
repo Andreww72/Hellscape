@@ -31,14 +31,15 @@ uint16_t glThresholdCurrent = 1;
 uint16_t countCurrentTicks = 0;
 
 // Setup handles
-UART_Handle uartMotor;
-char motorAddr;
+UART_Handle uartTemp;
+char motorTempAddr;
+char boardTempAddr;
 Char taskLightStack[512];
-Char taskMotorTempStack[512];
+Char taskTempStack[512];
 Semaphore_Struct semLightStruct;
 Semaphore_Handle semLightHandle;
-Semaphore_Struct semMotorTempStruct;
-Semaphore_Handle semMotorTempHandle;
+Semaphore_Struct semTempStruct;
+Semaphore_Handle semTempHandle;
 
 // Recurring SWI stuff
 Clock_Params clkSensorParams;
@@ -75,56 +76,51 @@ void taskLight(UArg i2c_handle) {
     }
 }
 
-// Read and filter motor temperature (TMP007) sensor over UART
-void swiBoardTemp(UArg arg) {
-    // TODO read board temperature via UART
-    Semaphore_post(semMotorTempHandle);
-}
-
-void taskBoardTemp(UArg motor_addr) {
-    // TODO read board temperature via UART
-    // Probably copy taskMotorTemp
-}
-
-// Read and filter motor temperature (TMP107) sensor over UART
-void swiMotorTemp(UArg arg) {
+// Read and filter board and motor temperature (TMP107) sensors daisy chained over UART
+void swiTemp(UArg arg) {
     // On sensor booster pack
-    Semaphore_post(semMotorTempHandle);
+    Semaphore_post(semTempHandle);
 }
 
-void taskMotorTemp() {
-    // Build temperature read command packet
+void taskTemp() {
+    // Build temperature read command packets
     char tx_size = 3;
-    char rx_size = 2;
+    char rx_size = 4;
     char tx[3];
-    char rx[2];
+    char rx[4]; // Both TMP107s reply with two packets
 
-    //tx[0] = 0b10000010; // Constructed 0b01000001 is flipped
+    // Setup transmission to make both TMP107s reply with temp
     tx[0] = 0x55; // Calibration Byte
-    tx[1] = TMP107_Read_bit | motorAddr;
+    // The daisy chain returns data starting from the address specified in the command or
+    // address phase, and ending with the address of the first device in the daisy chain.
+    tx[1] = TMP107_Global_bit | TMP107_Read_bit | motorTempAddr;
     tx[2] = TMP107_Temp_reg;
 
     while(1) {
-        Semaphore_pend(semMotorTempHandle, BIOS_WAIT_FOREVER);
+        Semaphore_pend(semTempHandle, BIOS_WAIT_FOREVER);
 
         // Transmit global temperature read command
-        TMP107_Transmit(uartMotor, tx, tx_size);
+        TMP107_Transmit(uartTemp, tx, tx_size);
         // Master cannot transmit again until after we've received
         // the echo of our transmit and given the TMP107 adequate
         // time to reply. thus, we wait.
         // Copy the response from TMP107 into user variable
-        TMP107_WaitForEcho(uartMotor, tx_size, rx, rx_size);
+        TMP107_WaitForEcho(uartTemp, tx_size, rx, rx_size);
 
         // Convert two bytes received from TMP107 into degrees C
-        float tmp107_temp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+        float boardTemp = TMP107_DecodeTemperatureResult(rx[3], rx[2]);
+        float motorTemp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
 
         // Variables for the ring buffer (not quite a ring buffer though)
-        static uint8_t motorTempHead = 0;
-        motorTempBuffer[motorTempHead++] = tmp107_temp;
-        motorTempHead %= windowTemp;
+        static uint8_t tempHead = 0;
 
-        System_printf("Temp: %f\n", tmp107_temp);
-        System_flush();
+        boardTempBuffer[tempHead] = boardTemp;
+        motorTempBuffer[tempHead++] = motorTemp;
+        tempHead %= windowTemp;
+
+//        System_printf("BTemp: %f\n", boardTemp);
+//        System_printf("MTemp: %f\n", motorTemp);
+//        System_flush();
     }
 }
 
@@ -168,14 +164,10 @@ void swiCurrent(UArg arg) {
     currentBuffer[currentHead++] = current;
     currentHead %= windowCurrent;
 
-    // Check once a second if current limit exceeded
-    countCurrentTicks++;
-    if (countCurrentTicks >= CURR_CHECK_TICKS) {
-        countCurrentTicks = 0;
-
-        if (current > glThresholdCurrent) {
-            eStopMotor();
-        }
+    // Check if current limit exceeded
+    if (current > glThresholdCurrent) {
+        eStopMotor();
+        StartStopGUI();
     }
 }
 
@@ -190,7 +182,8 @@ void swiAcceleration(UArg arg) {
 // Interrupt when temp, or acceleration threshold reached
 void callbackTriggerTempEStop(unsigned int index) {
     eStopMotor();
-    TMP107_AlertOverClear(uartMotor);
+    StartStopGUI();
+    TMP107_AlertOverClear(uartTemp);
 }
 
 ///////////**************??????????????
@@ -254,28 +247,18 @@ bool initLight() {
 }
 
 // TEMPERATURE SETUP
-bool initBoardTemp() {
-    // Create a recurring 2Hz SWI swi_temp
-    //clkSensorParams.period = 500;
-    //Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiBoardTemp, 1, &clkSensorParams);
-
-    // TODO Setup UART connection for board TMP107
-    // TODO Setup board TMP107 temperature sensor
-
-    return true;
-}
-
-bool initMotorTemp(uint16_t thresholdTemp) {
+bool initTemp(uint16_t thresholdTemp) {
     // Initialise UART
-    uartMotor = initMotorUart();
-    TMP107_Init(uartMotor);
-    motorAddr = TMP107_LastDevicePoll(uartMotor); // motor_addr var will be a backwards 5 bit
-    int device_count = TMP107_Decode5bitAddress(motorAddr);
+    uartTemp = TMP107_InitUart();
+    boardTempAddr = TMP107_Init(uartTemp);
+    motorTempAddr = TMP107_LastDevicePoll(uartTemp); // motor_addr var will be a backwards 5 bit
+    int device_count = TMP107_Decode5bitAddress(motorTempAddr);
 
-    TMP107_Set_Config(uartMotor, motorAddr);
+    TMP107_Set_Config(uartTemp, boardTempAddr);
+    TMP107_Set_Config(uartTemp, motorTempAddr);
 
     // Setup TMP107 interrupt on Q1 for crossing user defined threshold
-    GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_INPUT | GPIO_FALLING_EDGE);
+    GPIO_setConfig(Board_TMP107_INT, GPIO_CFG_INPUT | GPIO_BOTH_EDGES);
     GPIO_setCallback(Board_TMP107_INT, callbackTriggerTempEStop);
     GPIO_enableInt(Board_TMP107_INT);
     setThresholdTemp(thresholdTemp);
@@ -287,24 +270,24 @@ bool initMotorTemp(uint16_t thresholdTemp) {
     Semaphore_Params semParams;
     Semaphore_Params_init(&semParams);
     semParams.mode = Semaphore_Mode_BINARY;
-    Semaphore_construct(&semMotorTempStruct, 0, &semParams);
-    semMotorTempHandle = Semaphore_handle(&semMotorTempStruct);
+    Semaphore_construct(&semTempStruct, 0, &semParams);
+    semTempHandle = Semaphore_handle(&semTempStruct);
 
     Task_Params taskParams;
     Task_Params_init(&taskParams);
     taskParams.stackSize = 512;
     taskParams.priority = 11;
-    taskParams.stack = &taskMotorTempStack;
-    Task_Handle motorTempTask = Task_create((Task_FuncPtr)taskMotorTemp, &taskParams, NULL);
-    if (motorTempTask == NULL) {
-        System_printf("Task - MOTOR TEMP FAILED SETUP");
+    taskParams.stack = &taskTempStack;
+    Task_Handle tempTask = Task_create((Task_FuncPtr)taskTemp, &taskParams, NULL);
+    if (tempTask == NULL) {
+        System_printf("Task - TEMP FAILED SETUP");
         System_flush();
         return false;
     }
 
     // Create a recurring 2Hz SWI swi_temp
     clkSensorParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiMotorTemp, 1, &clkSensorParams);
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiTemp, 1, &clkSensorParams);
 
     System_printf("Temperature setup\n");
     System_flush();
@@ -381,8 +364,14 @@ float getLight() {
 }
 
 float getBoardTemp() {
-    return 25;
-}
+    float sum = 0;
+
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowTemp; i++) {
+        sum += boardTempBuffer[i];
+    }
+    return (sum / (float)windowTemp);}
 
 float getMotorTemp() {
     float sum = 0;
@@ -418,7 +407,7 @@ void setThresholdTemp(uint8_t thresholdTemp) {
     char rx[2];
 
     tx[0] = 0x55; // Calibration Byte
-    tx[1] = motorAddr;
+    tx[1] = motorTempAddr;
     tx[2] = TMP107_High_Limit_reg;
 
     uint16_t encoded = (uint16_t) ((float)thresholdTemp / 0.015625);
@@ -429,12 +418,12 @@ void setThresholdTemp(uint8_t thresholdTemp) {
     tx[4] = low_byte; // Set threshold
 
     // Transmit global temperature read command
-    TMP107_Transmit((UART_Handle)uartMotor, tx, tx_size);
+    TMP107_Transmit(uartTemp, tx, tx_size);
     // Master cannot transmit again until after we've received
     // the echo of our transmit and given the TMP107 adequate
     // time to reply. thus, we wait.
     // Copy the response from TMP107 into user variable
-    TMP107_WaitForEcho((UART_Handle)uartMotor, tx_size, rx, rx_size);
+    TMP107_WaitForEcho(uartTemp, tx_size, rx, rx_size);
 }
 
 void setThresholdCurrent(uint16_t thresholdCurrent) {
@@ -455,8 +444,7 @@ bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thr
     clkSensorParams.startFlag = TRUE;
 
     //initLight();
-    //initBoardTemp();
-    initMotorTemp(thresholdTemp);
+    initTemp(thresholdTemp);
     initCurrent(thresholdCurrent);
     //initAcceleration(thresholdAccel);
     return 1;

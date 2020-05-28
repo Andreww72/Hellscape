@@ -18,6 +18,7 @@
 #include <inc/hw_memmap.h>
 
 #include "motor/motor_api.h"
+#include "ui/user_interface.h"
 #include "opt3001/i2cOptDriver.h" // i2OptDriver must go before opt3001
 #include "opt3001/opt3001.h"
 #include "tmp107/tmp107.h"

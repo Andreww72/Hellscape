@@ -10,7 +10,7 @@
 #define TMP107_High_Limit_reg 0b10100010 // At 1h thus 1010PPPP=10100010
 #define TMP107_Timeout 40
 
-UART_Handle initMotorUart();
+UART_Handle TMP107_InitUart();
 
 void TMP107_Transmit(UART_Handle uartMotor, char* tx_data, char tx_size);
 void TMP107_WaitForEcho(UART_Handle uartMotor, char tx_size, char* rx_data, char rx_size);
