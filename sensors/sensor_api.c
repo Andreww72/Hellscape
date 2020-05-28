@@ -160,7 +160,7 @@ void swiCurrent(UArg arg) {
 
     // Variables for the ring buffer (not quite a ring buffer though)
     static uint8_t currentHead = 0;
-    float current = currentSensorB + currentSensorC;
+    float current = (currentSensorB + currentSensorC) * 3 / 2;
     currentBuffer[currentHead++] = current;
     currentHead %= windowCurrent;
 

@@ -51,6 +51,8 @@ uint32_t maxGraph;
 // Get sContext for empty_min.c externally
 extern tContext sContext;
 extern bool shouldDrawDataOnGraph;
+int motorState = 0;
+int homeScreenFlag = 1;
 
 // EEPROM settings
 uint32_t e2prom_write_settings[4] = {50, 1000, 50, 50}; /* Write struct */
@@ -227,6 +229,7 @@ void removeAllWidgets() {
     WidgetRemove((tWidget *)(&g_sMenuGraphPage));
     WidgetRemove((tWidget *)(&g_sSettingPage));
     WidgetRemove((tWidget *)(&g_sGraphPage));
+    homeScreenFlag = 0;
 }
 
 // Draws the home screen
@@ -235,6 +238,7 @@ static void DrawHomeScreen()
     removeAllWidgets();
     WidgetPaint((tWidget *) &g_sMenuTypePage);
     WidgetAdd(WIDGET_ROOT, (tWidget *) &g_sMenuTypePage);
+    homeScreenFlag = 1;
 }
 
 // Draws the setting menu
@@ -360,7 +364,6 @@ static void decreaseSetting() {
     }
 }
 
-int motorState = 0;
 static void StartStopMotor() {
     if (motorState == 0) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
@@ -379,10 +382,12 @@ void StartStopGUI() {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
         motorState = 1;
     } else {
-        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "eStopped, Restart Motor");
+        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "eStopped: Restart Motor");
         motorState = 0;
     }
-    WidgetPaint((tWidget *) &g_sMotorOption);
+    if (homeScreenFlag) {
+        WidgetPaint((tWidget *) &g_sMotorOption);
+    }
 }
 
 static void drawPowerGraph()
