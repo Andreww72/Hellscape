@@ -20,7 +20,7 @@
 #define windowAcceleration 5
 
 // Data collectors (before filtering)
-uint16_t lightBuffer[windowLight];
+float lightBuffer[windowLight];
 float boardTempBuffer[windowTemp];
 float motorTempBuffer[windowTemp];
 float currentBuffer[windowCurrent];
@@ -55,31 +55,34 @@ Clock_Struct clockAccelerationStruct;
 ///////////**************??????????????
 
 // Read and filter light over I2C
-void swiLight(UArg arg) {
+void swiLight() {
     // On sensor booster pack
     Semaphore_post(semLightHandle);
 }
 
-void taskLight(UArg i2c_handle) {
+void taskLight() {
     while(1) {
         Semaphore_pend(semLightHandle, BIOS_WAIT_FOREVER);
 
         // Variables for the ring buffer (not quite a ring buffer though)
         static uint8_t light_head = 0;
         uint16_t rawData = 0;
+        float converted;
 
-        if (sensorOpt3001Read((I2C_Handle)i2c_handle, &rawData)) {
-            lightBuffer[light_head++] = rawData;
+        if (sensorOpt3001Read(&rawData)) {
+            sensorOpt3001Convert(rawData, &converted);
+
+            lightBuffer[light_head++] = converted;
             light_head %= windowLight;
 
-            //System_printf("Lux: %d\n", rawData);
+            //System_printf("Lux: %f\n", converted);
             //System_flush();
         }
     }
 }
 
 // Read and filter board and motor temperature (TMP107) sensors daisy chained over UART
-void swiTemp(UArg arg) {
+void swiTemp() {
     // On sensor booster pack
     Semaphore_post(semTempHandle);
 }
@@ -132,7 +135,7 @@ void taskTemp() {
 }
 
 // Read and filter two motor phase currents via analogue signals
-void swiCurrent(UArg arg) {
+void swiCurrent() {
     uint32_t ADC1ValueB[1], ADC1ValueC[1];
     float V_OutB = 0;
     float V_OutC = 0;
@@ -205,7 +208,7 @@ void swiCurrent(UArg arg) {
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
 // NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
-void swiAcceleration(UArg arg) {
+void swiAcceleration() {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
     // ABS is calculated from those three in a getter
@@ -216,24 +219,14 @@ void swiAcceleration(UArg arg) {
 ///////////**************??????????????
 // LIGHT SETUP
 bool initLight() {
-    // Set up I2C
     I2C_Params i2cParams;
     I2C_Params_init(&i2cParams);
-    I2C_Handle lighti2c = I2C_open(Board_I2C2, &i2cParams);
+    lighti2c = I2C_open(Board_I2C2, &i2cParams);
     if (!lighti2c) {
         System_printf("Light I2C did not open\n");
-        System_flush();
     }
-
-    Task_sleep(10);
-    bool status = sensorOpt3001Test(lighti2c);
-    while (!status) {
-        System_printf("OPT3001 test failed, retrying\n");
-        System_flush();
-        status = sensorOpt3001Test(lighti2c);
-    }
-    sensorOpt3001Init(lighti2c);
-    sensorOpt3001Enable(lighti2c, true);
+    bool worked = sensorOpt3001Test();
+    sensorOpt3001Enable(true);
 
     // Create task that reads light sensor
     // This retarded elaborate: swi - sem - task setup
@@ -250,25 +243,18 @@ bool initLight() {
     taskParams.stackSize = 512;
     taskParams.priority = 11;
     taskParams.stack = &taskLightStack;
-    taskParams.arg0 = lighti2c; // You can indeed assign this type, just cast it back in the task
     Task_Handle lightTask = Task_create((Task_FuncPtr)taskLight, &taskParams, NULL);
     if (lightTask == NULL) {
         System_printf("Task - LIGHT FAILED SETUP");
-        System_flush();
-        status = 0;
     }
 
     // Create a recurring 2Hz SWI swi_light to post semaphore
     clkSensorParams.period = 500;
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkSensorParams);
 
-    if (status) {
-        System_printf("Light setup\n");
-        System_flush();
-        return true;
-    } else {
-        return false;
-    }
+    System_printf("Light setup\n");
+    System_flush();
+    return true;
 }
 
 // TEMPERATURE SETUP
@@ -376,10 +362,8 @@ float getLight() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowLight; i++){
-        float converted;
-        sensorOpt3001Convert(lightBuffer[i], &converted);
-        sum += converted;
+    for (i = 0; i < windowLight; i++) {
+        sum += lightBuffer[i];
     }
 
     return (sum / (float)windowLight);
@@ -452,9 +436,9 @@ bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thr
     Clock_Params_init(&clkSensorParams);
     clkSensorParams.startFlag = TRUE;
 
-    //initLight();
-    initTemp(thresholdTemp);
-    initCurrent(thresholdCurrent);
-    //initAcceleration(thresholdAccel);
-    return 1;
+    return
+            initLight() &&
+            initTemp(thresholdTemp) &&
+            initCurrent(thresholdCurrent) &&
+            initAcceleration(thresholdAccel);
 }

@@ -25,6 +25,8 @@
 #include "tmp107/hal.h"
 #include "bmi160/bmi160.h"
 
+I2C_Handle lighti2c;
+
 // Initialises all the sensors:
 // Light, board & motor temp, currents, acceleration, and eStop interrupts
 // Thresholds: Temp in int degrees C, current in mA, acceleration in m/s^2

@@ -8,7 +8,7 @@
 #define DEVICE_ID                       0x3001  // Opt 3001
 #define CONFIG_RESET                    0xC810
 #define CONFIG_TEST                     0xCC10
-#define CONFIG_ENABLE                   0x10C4 // 0xC410   - 100 ms, continuous       0b0001000011000100
+#define CONFIG_ENABLE                   0xC410 // 0xC410   - 100 ms, continuous
 #define CONFIG_DISABLE                  0x10C0 // 0xC010   - 100 ms, shutdown
 
 /* Bit values */
@@ -23,8 +23,8 @@
  *
  * @return      none
  **************************************************************************************************/
-bool sensorOpt3001Init(I2C_Handle i2c) {
-	sensorOpt3001Enable(i2c, false);
+bool sensorOpt3001Init() {
+	sensorOpt3001Enable(false);
 	return true;
 }
 
@@ -36,33 +36,19 @@ bool sensorOpt3001Init(I2C_Handle i2c) {
  *
  * @return      none
  **************************************************************************************************/
-void sensorOpt3001Enable(I2C_Handle i2c, bool enable) {
+void sensorOpt3001Enable(bool enable) {
 	uint16_t val_config;
-	uint16_t val_low;
-	uint16_t val_high;
 
+	// Starts as 0b11001 00 000010000
+	// Enable by 0b11001110 00010000 MSB but swap order of bytes
 	if (enable) {
-		val_config = 0b0001000011000100;
-		val_low = 0b1111111100001111;
-
-		// Eq 1: Lux = 0.01 x 2^(exponent_value) x result_value
-		// Exponent value of 10 (0b1010)
-		// Result value of 245 (0b000011110101)
-		val_high = 0b1111010110100000; // Results ~2509 lux
+		val_config = 0b0001000011001110;
 	} else {
 	    val_config = CONFIG_DISABLE;
-	    val_low = 0;
-		val_high = 0;
 	}
 
 	// Write to configuration register 01h
-	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val_config);
-
-	// Write to low-limit register 02h
-	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_LOW_LIMIT, (uint8_t*)&val_low);
-
-	// Write to high-limit register 03h
-	writeI2C(i2c, OPT3001_I2C_ADDRESS, REG_HIGH_LIMIT, (uint8_t*)&val_high);
+	writeI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t*)&val_config);
 }
 
 
@@ -75,18 +61,18 @@ void sensorOpt3001Enable(I2C_Handle i2c, bool enable) {
  *
  * @return      TRUE if valid data
  **************************************************************************************************/
-bool sensorOpt3001Read(I2C_Handle i2c, uint16_t *rawData) {
+bool sensorOpt3001Read(uint16_t *rawData) {
 	bool success;
 	uint16_t val;
 
-	success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val);
+	success = readI2C(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, (uint8_t *)&val);
 
 	if (success) {
 		success = (val & DATA_RDY_BIT) == DATA_RDY_BIT;
 	}
 
 	if (success) {
-		success = readI2C(i2c, OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val);
+		success = readI2C(OPT3001_I2C_ADDRESS, REG_RESULT, (uint8_t *)&val);
 	}
 
 	if (success) {
@@ -104,11 +90,11 @@ bool sensorOpt3001Read(I2C_Handle i2c, uint16_t *rawData) {
  *
  * @return      TRUE if passed, FALSE if failed
  **************************************************************************************************/
-bool sensorOpt3001Test(I2C_Handle i2c) {
+bool sensorOpt3001Test() {
 	uint16_t val;
 
 	// Check manufacturer ID
-	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_MANUFACTURER_ID, (uint8_t *)&val);
+	readI2C(OPT3001_I2C_ADDRESS, REG_MANUFACTURER_ID, (uint8_t *)&val);
 	val = (val << 8) | (val>>8 &0xFF);
 
 	if (val != MANUFACTURER_ID) {
@@ -116,7 +102,7 @@ bool sensorOpt3001Test(I2C_Handle i2c) {
 	}
 
 	// Check device ID
-	readI2C(i2c, OPT3001_I2C_ADDRESS, REG_DEVICE_ID, (uint8_t *)&val);
+	readI2C(OPT3001_I2C_ADDRESS, REG_DEVICE_ID, (uint8_t *)&val);
 	val = (val << 8) | (val>>8 &0xFF);
 
 	if (val != DEVICE_ID) {

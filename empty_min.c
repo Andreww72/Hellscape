@@ -71,13 +71,13 @@ time_t t1;
 static char * getCurrentDateTime() {
     static char t[30];
     struct tm * timeinfo;
-    timeinfo = localtime ( &t1 );
+    timeinfo = localtime (&t1);
     timeinfo->tm_hour += 16;
-    if (timeinfo->tm_hour>24) {
+    if (timeinfo->tm_hour > 24) {
         timeinfo->tm_hour -= 24;
         timeinfo->tm_mday +=1;
     }
-    strcpy(t,asctime(timeinfo));
+    strcpy(t, asctime(timeinfo));
     return t;
 }
 
@@ -100,7 +100,6 @@ void DrawDateTime() {
 }
 
 void userInterfaceFxn(UArg ui32SysClock) {
-
     // Need this for Touchscreen
     Hwi_Params hwiParams;
     Hwi_Params_init(&hwiParams);
@@ -129,7 +128,7 @@ void userInterfaceFxn(UArg ui32SysClock) {
     }
 }
 
-void sensorsFxn(UArg arg0) {
+void sensorsFxn() {
     // Default threshold integer parameters: degrees C, mA, m/s^2
     if (!initSensors(30, 1500, 40)) {
         System_abort("Failed sensor init");

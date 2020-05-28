@@ -5,7 +5,7 @@
  * Puts ui8Reg followed by two data bytes in *data and transfers
  * over i2c
  */
-bool writeI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
+bool writeI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     I2C_Transaction i2cTransaction;
     uint8_t txBuf[3];
     txBuf[0] = ui8Reg;
@@ -18,7 +18,7 @@ bool writeI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     i2cTransaction.readBuf = NULL;
     i2cTransaction.readCount = 0;
 
-    I2C_transfer(i2c, &i2cTransaction);
+    I2C_transfer(lighti2c, &i2cTransaction);
 
     return true;
 }
@@ -30,7 +30,7 @@ bool writeI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
  * helps to flush the i2c register
  * Stores first two received bytes into *data
  */
-bool readI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
+bool readI2C(uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     I2C_Transaction i2cTransaction;
     uint8_t txBuf[1];
     uint8_t rxBuf[2];
@@ -42,7 +42,7 @@ bool readI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     i2cTransaction.readCount = 2;
 
     txBuf[0] = ui8Reg;
-    I2C_transfer(i2c, &i2cTransaction);
+    I2C_transfer(lighti2c, &i2cTransaction);
     data[0] = rxBuf[0];
     data[1] = rxBuf[1];
 

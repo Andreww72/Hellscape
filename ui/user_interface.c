@@ -1,25 +1,4 @@
 #include "user_interface.h"
-#include <driverlib/gpio.h>
-#include <driverlib/interrupt.h>
-#include <inc/hw_ints.h>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "grlib/widget.h"
-#include "grlib/canvas.h"
-#include "grlib/pushbutton.h"
-#include "drivers/pinout.h"
-#include "drivers/frame.h"
-#include "drivers/touch.h"
-#include "constants.h"
-#include <string.h>
-#include <ti/sysbios/knl/Clock.h>
-#include <xdc/runtime/System.h>
-#include "motor/motor_api.h"
-#include "driverlib/eeprom.h"
-#include "driverlib/sysctl.h"
-#include "../sensors/sensor_api.h"
-#include "../motor/motor_api.h"
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
@@ -628,7 +607,7 @@ void setupEEPROM() {
     EEPROMInit(); // EEPROM start
 
     // Clear EEPROM
-    //EEPROMMassErase();
+    EEPROMMassErase();
 
     // Read the settings
     EEPROMRead((uint32_t *)&e2prom_read_settings, E2PROM_ADRES, sizeof(e2prom_read_settings));
