@@ -377,16 +377,14 @@ static void StartStopMotor() {
     WidgetPaint((tWidget *) &g_sMotorOption);
 }
 
-void StartStopGUI() {
-    if (motorState == 0) {
-        PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "Stop Motor");
-        motorState = 1;
-    } else {
+void eStopGUI() {
+    if (motorState == 1) {
         PushButtonTextSet((tPushButtonWidget *)&g_sMotorOption, "eStopped: Restart Motor");
         motorState = 0;
-    }
-    if (homeScreenFlag) {
-        WidgetPaint((tWidget *) &g_sMotorOption);
+
+        if (homeScreenFlag) {
+            WidgetPaint((tWidget *) &g_sMotorOption);
+        }
     }
 }
 

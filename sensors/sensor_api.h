@@ -26,7 +26,8 @@
 #include "bmi160/bmi160.h"
 
 // Initialises all the sensors:
-// Light, board temp, motor temp, currents, acceleration (and interrupt)
+// Light, board & motor temp, currents, acceleration, and eStop interrupts
+// Thresholds: Temp in int degrees C, current in mA, acceleration in m/s^2
 bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
 
 // Read and filter light over I2C

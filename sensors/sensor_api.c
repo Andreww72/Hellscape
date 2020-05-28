@@ -27,7 +27,7 @@ float currentBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
 
 // Current thresholds that trigger eStop
-uint16_t glThresholdCurrent = 1;
+float glThresholdCurrent = 1.0;
 uint16_t countCurrentTicks = 0;
 
 // Setup handles
@@ -164,10 +164,25 @@ void swiCurrent(UArg arg) {
     currentBuffer[currentHead++] = current;
     currentHead %= windowCurrent;
 
-    // Check if current limit exceeded
-    if (current > glThresholdCurrent) {
-        eStopMotor();
-        StartStopGUI();
+    countCurrentTicks++;
+
+    if (countCurrentTicks > 250) {
+        countCurrentTicks = 0;
+
+        // Check if current limit exceeded
+        float sum = 0;
+        uint8_t i;
+        for (i = 0; i < windowCurrent; i++) {
+            sum += currentBuffer[i];
+        }
+        float avgCurrent = sum / windowCurrent;
+        System_printf("Current: %f\n", avgCurrent);
+        System_flush();
+
+        if (avgCurrent > glThresholdCurrent) {
+            eStopMotor();
+            eStopGUI();
+        }
     }
 }
 
@@ -182,7 +197,7 @@ void swiAcceleration(UArg arg) {
 // Interrupt when temp, or acceleration threshold reached
 void callbackTriggerTempEStop(unsigned int index) {
     eStopMotor();
-    StartStopGUI();
+    eStopGUI();
     TMP107_AlertOverClear(uartTemp);
 }
 
@@ -392,7 +407,7 @@ float getCurrent() {
     for (i = 0; i < windowCurrent; i++) {
         sum += currentBuffer[i];
     }
-    return ((sum / (float)windowCurrent) * 3.0 / 2.0);
+    return (sum / (float)windowCurrent);
 }
 
 uint8_t getAcceleration() {
@@ -427,7 +442,7 @@ void setThresholdTemp(uint8_t thresholdTemp) {
 }
 
 void setThresholdCurrent(uint16_t thresholdCurrent) {
-    glThresholdCurrent = thresholdCurrent;
+    glThresholdCurrent = (float)thresholdCurrent / 1000;
 }
 
 void setThresholdAccel(uint16_t thresholdAccel) {
@@ -438,7 +453,6 @@ void setThresholdAccel(uint16_t thresholdAccel) {
 // God tier make everything work fxn //
 ///////////**************??????????????
 bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel) {
-
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkSensorParams);
     clkSensorParams.startFlag = TRUE;
