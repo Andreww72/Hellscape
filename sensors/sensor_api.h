@@ -40,6 +40,7 @@ float getMotorTemp();
 // Read and filter two motor phase currents via analogue signals on the current sensors
 // Just have the 'total' available for external.
 float getCurrent();
+float getPower();
 
 // Read and filter acceleration on all three axes
 // Calculate avg abs acceleration

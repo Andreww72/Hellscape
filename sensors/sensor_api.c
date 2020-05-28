@@ -24,6 +24,7 @@ uint16_t lightBuffer[windowLight];
 float boardTempBuffer[windowTemp];
 float motorTempBuffer[windowTemp];
 float currentBuffer[windowCurrent];
+float powerBuffer[windowCurrent];
 uint8_t accelerationBuffer[windowAcceleration];
 
 // Current thresholds that trigger eStop
@@ -96,6 +97,12 @@ void taskTemp() {
     tx[1] = TMP107_Global_bit | TMP107_Read_bit | motorTempAddr;
     tx[2] = TMP107_Temp_reg;
 
+    char tx_test[3];
+    char rx_test[2];
+    tx_test[0] = 0x55;
+    tx_test[1] = TMP107_Read_bit | motorTempAddr;
+    tx_test[2] = TMP107_Config_reg;
+
     while(1) {
         Semaphore_pend(semTempHandle, BIOS_WAIT_FOREVER);
 
@@ -117,6 +124,10 @@ void taskTemp() {
         boardTempBuffer[tempHead] = boardTemp;
         motorTempBuffer[tempHead++] = motorTemp;
         tempHead %= windowTemp;
+
+        TMP107_Transmit(uartTemp, tx_test, 3);
+        TMP107_WaitForEcho(uartTemp, 3, rx_test, 2);
+        //System_printf("CF Reg: %d & %d\n", rx_test[0], rx_test[1]);
 
         //System_printf("BTemp: %f\n", boardTemp);
         //System_printf("MTemp: %f\n", motorTemp);
@@ -164,8 +175,16 @@ void swiCurrent(UArg arg) {
     currentBuffer[currentHead++] = current;
     currentHead %= windowCurrent;
 
-    countCurrentTicks++;
+    // Save power for graphing
+    static uint8_t powerHead = 0;
+    // P = V * I     using avg of the voltages
+    float power = current * (V_OutC + V_OutC) / 2;
+    powerBuffer[powerHead++] = power;
+    powerHead %= windowCurrent; // windowCurrent deliberate
 
+    // Check if filtered current exceeds threshold
+    // Don't check every cycle, too expensive
+    countCurrentTicks++;
     if (countCurrentTicks > 250) {
         countCurrentTicks = 0;
 
@@ -411,6 +430,17 @@ float getCurrent() {
     uint8_t i;
     for (i = 0; i < windowCurrent; i++) {
         sum += currentBuffer[i];
+    }
+    return (sum / (float)windowCurrent);
+}
+
+float getPower() {
+    float sum = 0;
+
+    // This is fine since window is the size of the buffer
+    uint8_t i;
+    for (i = 0; i < windowCurrent; i++) {
+        sum += powerBuffer[i];
     }
     return (sum / (float)windowCurrent);
 }
