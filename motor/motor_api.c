@@ -21,8 +21,8 @@
 #define ACCEL_PER_TICK 3
 #define DECCEL_PER_TICK 6
 #define ESTOP_DECCEL_PER_TICK 10
-#define Kp 0.02   // DO NOT TOUCH
-#define Ki 0.0001 // DO NOT TOUCH
+#define Kp 0.03   // DO NOT TOUCH
+#define Ki 0.0004 // DO NOT TOUCH
 
 GateHwi_Handle gateHwi;
 GateHwi_Params gHwiprms; // @suppress("Ambiguous problem")
@@ -34,6 +34,7 @@ int accel_speed = 0;
 int cum_speed_error = 0;
 int rpm_buffer[BUFFER_SIZE];
 int rpm_index = 0;
+int executions = 0;
 bool motor_on = false;
 bool estop = false;
 
@@ -120,6 +121,13 @@ void checkSpeedSwi() {
     UInt key;
     key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
 
+//    executions++;
+//    if (executions == 300) {
+//        System_printf("%d %d\n", speed_rpm, accel_speed);
+//        System_flush();
+//        executions = 0;
+//    }
+
     // If we're trying to accelerate, give the motor another lil push
     // Courtesy of friction, sometimes the bastard just won't start
     if (!speed_rpm && motor_on) {
@@ -132,6 +140,7 @@ void checkSpeedSwi() {
             accel_speed -= ESTOP_DECCEL_PER_TICK;
             if (speed_rpm <= 0) {
                 stopMotor(true);
+                cum_speed_error = 0;
             }
         }
     }
@@ -144,6 +153,7 @@ void checkSpeedSwi() {
             accel_speed -= DECCEL_PER_TICK;
             if (speed_rpm <= 0) {
                 stopMotor(true);
+                cum_speed_error = 0;
             }
         }
     } else {
@@ -151,6 +161,7 @@ void checkSpeedSwi() {
             accel_speed -= DECCEL_PER_TICK;
             if (speed_rpm <= 0) {
                 stopMotor(true);
+                cum_speed_error = 0;
             }
         }
     }
@@ -204,14 +215,17 @@ static void setSpeed() {
     GateHwi_leave(gateHwi, key); // @suppress("Invalid arguments")
     cum_speed_error += error;
 
-    if (cum_speed_error > 20000) {
-        cum_speed_error = 20000;
+    if (cum_speed_error > 140000) {
+        cum_speed_error = 140000;
     } else if (cum_speed_error < -20000) {
         cum_speed_error = -20000;
     }
 
     // Calculate the duty cycle
     duty = Kp*error + Ki*cum_speed_error;
+    if (duty < 0) {
+        duty = 0;
+    }
 
     setDuty(duty);
 }

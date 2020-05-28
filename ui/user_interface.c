@@ -57,8 +57,8 @@ int motorState = 0;
 int homeScreenFlag = 1;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {30, 1000, 1000, 40}; /* Write struct: Temp | Speed | Current | Accel */
-uint32_t e2prom_read_settings[4] =  {30, 1000, 1000, 40}; /* Read struct */
+uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 40}; /* Write struct: Temp | Speed | Current | Accel */
+uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 40}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
