@@ -215,7 +215,8 @@ void swiAcceleration() {
     accel_head %= WINDOW_ACCEL;
 
     if (current_accel > glThresholdAccel){
-        swiAcceleration();
+        eStopMotor();
+        eStopGUI();
     }
 
 }
