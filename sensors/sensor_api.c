@@ -41,10 +41,13 @@ char motorTempAddr;
 // Setup tasks, semaphores and swis
 Char taskLightStack[512];
 Char taskTempStack[512];
+Char taskAccelStack[512];
 Semaphore_Struct semLightStruct;
 Semaphore_Handle semLightHandle;
 Semaphore_Struct semTempStruct;
 Semaphore_Handle semTempHandle;
+Semaphore_Struct semAccelStruct;
+Semaphore_Handle semAccelHandle;
 
 // Recurring SWI stuff
 Clock_Params clkSensorParams;
@@ -52,9 +55,6 @@ Clock_Struct clockLightStruct;
 Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
-
-// Keep track of if it's day or night
-uint8_t isDay = false;
 
 ///////////**************??????????????
 // Implementations of SWI functions  //
@@ -76,13 +76,6 @@ void taskLight() {
 
         if (OPT3001ReadLight(sensori2c, &rawData)) {
             OPT3001Convert(rawData, &converted);
-
-            // Handle day/night stuff
-            uint8_t isDayTemp = converted > 5;
-            if (isDayTemp != isDay) {
-                drawDayNight(isDay);
-                isDay = isDayTemp;
-            }
 
             lightBuffer[light_head++] = converted;
             light_head %= WINDOW_LIGHT;
@@ -206,36 +199,43 @@ void swiCurrent() {
     }
 }
 
-// Read and filter acceleration on all three axes, and calculate absolute acceleration.
+// Read and filter light over I2C
 void swiAcceleration() {
+    Semaphore_post(semAccelHandle);
+}
+
+// Read and filter acceleration on all three axes, and calculate absolute acceleration.
+void taskAcceleration() {
     // BMI160 Inertial Measurement Sensor
     static uint8_t accel_head = 0;
-    struct accel_data tmp_accel;
 
-    sensorBmi160GetAccelData(sensori2c, &tmp_accel);
+    while(1) {
+        Semaphore_pend(semAccelHandle, BIOS_WAIT_FOREVER);
+        struct accel_data tmp_accel;
 
-    float sum =
-            (float)tmp_accel.x * (float)tmp_accel.x +
-            (float)tmp_accel.y * (float)tmp_accel.y +
-            (float)tmp_accel.z * (float)tmp_accel.z;
+        sensorBmi160GetAccelData(sensori2c, &tmp_accel);
 
-    float current_accel;
-    if (sum == 0){
-        current_accel = 0;
-    } else {
-        current_accel == sqrt(sum);
+        float sum =
+                (float)tmp_accel.x * (float)tmp_accel.x +
+                (float)tmp_accel.y * (float)tmp_accel.y +
+                (float)tmp_accel.z * (float)tmp_accel.z;
+
+        float current_accel;
+        if (sum == 0){
+            current_accel = 0;
+        } else {
+            current_accel = sqrt(sum);
+        }
+
+        accelerationBuffer[accel_head++] = current_accel;
+
+        accel_head %= WINDOW_ACCEL;
+
+        if (current_accel > glThresholdAccel){
+            eStopMotor();
+            eStopGUI();
+        }
     }
-    //float current_accel = sum==0 ? sum : sqrt(sum);
-
-    accelerationBuffer[accel_head++] = current_accel;
-
-    accel_head %= WINDOW_ACCEL;
-
-    if (current_accel > glThresholdAccel){
-        eStopMotor();
-        eStopGUI();
-    }
-
 }
 
 ///////////**************??????????????
@@ -350,6 +350,26 @@ bool initCurrent(uint16_t thresholdCurrent) {
 bool initAcceleration(uint16_t thresholdAccel) {
     setThresholdAccel(thresholdAccel);
     sensorBmi160Init(sensori2c);
+
+    // Create task that reads temp sensor
+    // This elaborate: swi - sem - task setup
+    // is needed cause the read function doesn't work in a swi
+    // yet still need the recurringness a clock swi gives.
+    Semaphore_Params semParams;
+    Semaphore_Params_init(&semParams);
+    semParams.mode = Semaphore_Mode_BINARY;
+    Semaphore_construct(&semAccelStruct, 0, &semParams);
+    semAccelHandle = Semaphore_handle(&semAccelStruct);
+
+    Task_Params taskParams;
+    Task_Params_init(&taskParams);
+    taskParams.stackSize = 512;
+    taskParams.priority = 11;
+    taskParams.stack = &taskAccelStack;
+    Task_Handle accelTask = Task_create((Task_FuncPtr)taskAcceleration, &taskParams, NULL);
+    if (accelTask == NULL) {
+        System_printf("Task - ACCEL FAILED SETUP");
+    }
 
     // Create a recurring 200Hz SWI swi_acceleration
     clkSensorParams.period = 5;
