@@ -8,7 +8,6 @@
 #include "bmi160.h"
 
 
-
 bool sensorBmi160Init() {
 
     uint8_t conf;
@@ -29,7 +28,6 @@ bool sensorBmi160Init() {
     // BMI160_GYR_RANGE_REG -> Page 60
     conf = 0b100; //\pm 100\deg/s
     bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_GYR_RANGE_REG, &conf, 1);
-
 
     // TODO: Check BMI160_ERR_REG
     return true;
@@ -87,11 +85,4 @@ bool bmi160_readI2C(uint8_t device_address, uint8_t register_address, uint8_t* d
     I2CMasterDataGet(I2C0_BASE); // Flush I2C, ignore result
 
     return true;
-
 }
-
-
-
-
-
-

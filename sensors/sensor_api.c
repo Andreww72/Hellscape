@@ -15,7 +15,7 @@
 #define WINDOW_LIGHT        5
 #define WINDOW_TEMP         3
 #define WINDOW_POW_CURR     10
-#define WINDOW_ACCEL 5
+#define WINDOW_ACCEL        5
 
 // Data collectors (before filtering)
 float lightBuffer[WINDOW_LIGHT];
@@ -80,7 +80,6 @@ void taskLight() {
 
 // Read and filter board and motor temperature (TMP107) sensors daisy chained over UART
 void swiTemp() {
-    // On sensor booster pack
     Semaphore_post(semTempHandle);
 }
 
@@ -188,10 +187,6 @@ void swiCurrent() {
         }
         float avgCurrent = sum / WINDOW_POW_CURR;
 
-        //System_printf("C: %f\n", avgCurrent);
-        //System_printf("V: %f %f\n", V_OutB, V_OutC);
-        //System_flush();
-
         if (avgCurrent > glThresholdCurrent) {
             eStopMotor();
             eStopGUI();
@@ -200,7 +195,6 @@ void swiCurrent() {
 }
 
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
 void swiAcceleration() {
     // BMI160 Inertial Measurement Sensor
     // TODO Get acceleration readings on three axes
@@ -221,10 +215,10 @@ bool initLight() {
     bool success = OPT3001Test(lighti2c);
     OPT3001Enable(lighti2c, true);
 
-    // Create task that reads light sensor
-    // This retarded elaborate: swi - sem - task setup
+    // Create task that reads temp sensor
+    // This elaborate: swi - sem - task setup
     // is needed cause the read function doesn't work in a swi
-    // yet still need the stupid recurringness a clock swi gives.
+    // yet still need the recurringness a clock swi gives.
     Semaphore_Params semParams;
     Semaphore_Params_init(&semParams);
     semParams.mode = Semaphore_Mode_BINARY;
@@ -246,7 +240,6 @@ bool initLight() {
     Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkSensorParams);
 
     System_printf("Light setup\n");
-    System_flush();
     return success;
 }
 
@@ -265,9 +258,9 @@ bool initTemp(uint16_t thresholdTemp) {
     TMP107SetConfig(uartTemp, motorTempAddr);
 
     // Create task that reads temp sensor
-    // This retarded elaborate: swi - sem - task setup
+    // This elaborate: swi - sem - task setup
     // is needed cause the read function doesn't work in a swi
-    // yet still need the stupid recurringness a clock swi gives.
+    // yet still need the recurringness a clock swi gives.
     Semaphore_Params semParams;
     Semaphore_Params_init(&semParams);
     semParams.mode = Semaphore_Mode_BINARY;
@@ -282,7 +275,6 @@ bool initTemp(uint16_t thresholdTemp) {
     Task_Handle tempTask = Task_create((Task_FuncPtr)taskTemp, &taskParams, NULL);
     if (tempTask == NULL) {
         System_printf("Task - TEMP FAILED SETUP");
-        System_flush();
         return false;
     }
 
@@ -291,7 +283,6 @@ bool initTemp(uint16_t thresholdTemp) {
     Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiTemp, 1, &clkSensorParams);
 
     System_printf("Temperature setup\n");
-    System_flush();
     return true;
 }
 
@@ -320,14 +311,11 @@ bool initCurrent(uint16_t thresholdCurrent) {
     Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkSensorParams);
 
     System_printf("Current setup\n");
-    System_flush();
-
     return true;
 }
 
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
-// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
 bool initAcceleration(uint16_t thresholdAccel) {
     setThresholdAccel(thresholdAccel);
 
@@ -341,7 +329,6 @@ bool initAcceleration(uint16_t thresholdAccel) {
 
     System_printf("Acceleration setup\n");
     System_flush();
-
     return true;
 }
 

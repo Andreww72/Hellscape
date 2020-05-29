@@ -15,7 +15,6 @@
 #include <driverlib/sysctl.h>
 #include <driverlib/gpio.h>
 #include <inc/hw_memmap.h>
-
 #include "motor/motor_api.h"
 #include "ui/user_interface.h"
 #include "opt3001/opt3001.h"
@@ -27,25 +26,23 @@
 // Thresholds: Temp in int degrees C, current in mA, acceleration in m/s^2
 bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel);
 
-// Read and filter light over I2C
+// Get filtered lux
 float getLight();
 
-// Read and filter board and motor temperature sensors over UART
+// Get filtered board and motor temperatures (C)
 float getBoardTemp();
 float getMotorTemp();
 
-// Read and filter two motor phase currents via analogue signals on the current sensors
-// Just have the 'total' available for external.
+// Get filtered current (I) and power (W)
 float getCurrent();
 float getPower();
 
-// Read and filter acceleration on all three axes
-// Calculate avg abs acceleration
+// Get filtered absolute acceleration (m/s^2)
 float getAcceleration();
 
 // Update threshold values that trigger an eStop
-void setThresholdTemp(uint16_t thresholdTemp); // Use Celsius
-void setThresholdCurrent(uint16_t thresholdCurrent); // Use mA
-void setThresholdAccel(uint16_t thresholdAccel); // Use m/s^2
+void setThresholdTemp(uint16_t thresholdTemp);          // Use Celsius
+void setThresholdCurrent(uint16_t thresholdCurrent);    // Use mA
+void setThresholdAccel(uint16_t thresholdAccel);        // Use m/s^2
 
 #endif /* SENSORS_SENSOR_API_H_ */
