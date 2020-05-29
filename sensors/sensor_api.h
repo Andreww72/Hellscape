@@ -43,6 +43,6 @@ float getAcceleration();
 // Update threshold values that trigger an eStop
 void setThresholdTemp(uint16_t thresholdTemp);          // Use Celsius
 void setThresholdCurrent(uint16_t thresholdCurrent);    // Use mA
-void setThresholdAccel(uint16_t thresholdAccel);        // Use m/s^2
+void setThresholdAccel(float thresholdAccel);        // Use m/s^2
 
 #endif /* SENSORS_SENSOR_API_H_ */

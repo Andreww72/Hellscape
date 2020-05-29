@@ -18,18 +18,18 @@
 #define WINDOW_ACCEL        6
 
 // Data collectors (before filtering)
-float accelerationBuffer[windowAcceleration];
 float lightBuffer[WINDOW_LIGHT];
 float boardTempBuffer[WINDOW_TEMP];
 float motorTempBuffer[WINDOW_TEMP];
 float currentBuffer[WINDOW_POW_CURR];
 float powerBuffer[WINDOW_POW_CURR];
-uint8_t accelerationBuffer[WINDOW_ACCEL];
+float accelerationBuffer[WINDOW_ACCEL];
 
 // Current thresholds that trigger eStop
 uint16_t glThresholdTemp;
 float glThresholdCurrent;
 uint16_t countCurrentTicks;
+float glThresholdAccel;
 
 // Some handles accessed by sensor sub sub systems
 I2C_Handle lighti2c;
@@ -198,8 +198,26 @@ void swiCurrent() {
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
 void swiAcceleration() {
     // BMI160 Inertial Measurement Sensor
-    // TODO Get acceleration readings on three axes
-    // ABS is calculated from those three in a getter
+    static uint8_t accel_head = 0;
+    struct accel_data tmp_accel;
+
+    sensorBmi160GetAccelData(&tmp_accel);
+
+    float current_accel =
+            sqrt(
+                (float)tmp_accel.x * (float)tmp_accel.x +
+                (float)tmp_accel.y * (float)tmp_accel.y +
+                (float)tmp_accel.z * (float)tmp_accel.z
+            );
+
+    accelerationBuffer[accel_head++] = current_accel;
+
+    accel_head %= WINDOW_ACCEL;
+
+    if (current_accel > glThresholdAccel){
+        swiAcceleration();
+    }
+
 }
 
 ///////////**************??????????????
@@ -373,42 +391,7 @@ float getMotorTemp() {
     return (sum / (float)WINDOW_TEMP);
 }
 
-// Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
-void swiAcceleration(UArg arg) {
-    static uint8_t accel_head = 0;
-    struct accel_data tmp_accel;
-
-    sensorBmi160GetAccelData(&tmp_accel);
-
-    float current_accel =
-            sqrt(
-                (float)tmp_accel.x * (float)tmp_accel.x +
-                (float)tmp_accel.y * (float)tmp_accel.y +
-                (float)tmp_accel.z * (float)tmp_accel.z
-            );
-
-    accelerationBuffer[accel_head++] = current_accel;
-
-    accel_head %= windowAcceleration;
-
-    if (current_accel > thresholdAccel){
-        callbackAccelerometer(NULL);
-    }
-
-}
-
-// Accelerometer interrupt when crash threshold reached
-void callbackAccelerometer(UArg arg) {
-    eStopMotor();
-}
-
-///////////**************??????????????
-//              Getters              //
-///////////**************??????????????
-
-float getLight() {
-    // Lux must be converted from the raw values as uint16_t is cheaper to store
+float getCurrent() {
     float sum = 0;
 
     // This is fine since window is the size of the buffer
@@ -430,16 +413,18 @@ float getPower() {
     return (sum / (float)WINDOW_POW_CURR);
 }
 
+// Read and filter acceleration on all three axes, and calculate absolute acceleration.
+// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
 float getAcceleration() {
     // Calculate the average acceleration
 
     float s = 0;
     uint8_t i;
-    for(i=0; i<windowAcceleration; i++){
+    for(i=0; i<WINDOW_ACCEL; i++){
         s+=accelerationBuffer[i];
     }
 
-    return s/(float)windowAcceleration;
+    return s/(float)WINDOW_ACCEL;
 }
 
 void setThresholdTemp(uint16_t thresholdTemp) {
@@ -450,8 +435,8 @@ void setThresholdCurrent(uint16_t thresholdCurrent) {
     glThresholdCurrent = (float)thresholdCurrent / 1000;
 }
 
-void setThresholdAccel(uint16_t threshAccel) {
-    thresholdAccel = threshAccel;
+void setThresholdAccel(float threshAccel) {
+    glThresholdAccel = threshAccel;
     // TODO Update BMI160 with new limit... -> no longer required
 }
 
