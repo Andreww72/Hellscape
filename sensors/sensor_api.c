@@ -1,41 +1,42 @@
 #include "sensor_api.h"
 
-// Current sensor constants
-#define ADC_SEQB 1
-#define ADC_SEQC 2
-#define ADC_PRI 0
-#define ADC_STEP 0
-#define ADC_V_REF 3.3 // Page 1862 says ADC ref voltage 3.3V
-#define ADC_RESISTANCE 0.007 // FAQ
-#define ADC_GAIN 10.0 // FAQ
-#define ADC_RESOLUTION 4095.0 // Page 1861 says resolution 12 bits
-
-#define TMP_RESOLUTION 0.015625
-#define CURR_CHECK_TICKS 250
+// Sensor constants that don't have a separate file
+#define ADC_SEQB            1
+#define ADC_SEQC            2
+#define ADC_PRI             0
+#define ADC_STEP            0
+#define ADC_V_REF           3.3 // Page 1862 says ADC ref voltage 3.3V
+#define ADC_RESISTANCE      0.007 // FAQ
+#define ADC_GAIN            10.0 // FAQ
+#define ADC_RESOLUTION      4095.0 // Page 1861 says resolution 12 bits
+#define CURR_CHECK_TICKS    250
 
 // Data window size constants
-#define windowLight 5
-#define windowTemp 3
-#define windowCurrent 5
-#define windowAcceleration 5
+#define WINDOW_LIGHT        5
+#define WINDOW_TEMP         3
+#define WINDOW_POW_CURR     10
+#define WINDOW_ACCEL 5
 
 // Data collectors (before filtering)
-float lightBuffer[windowLight];
-float boardTempBuffer[windowTemp];
-float motorTempBuffer[windowTemp];
-float currentBuffer[windowCurrent];
-float powerBuffer[windowCurrent];
-uint8_t accelerationBuffer[windowAcceleration];
+float lightBuffer[WINDOW_LIGHT];
+float boardTempBuffer[WINDOW_TEMP];
+float motorTempBuffer[WINDOW_TEMP];
+float currentBuffer[WINDOW_POW_CURR];
+float powerBuffer[WINDOW_POW_CURR];
+uint8_t accelerationBuffer[WINDOW_ACCEL];
 
 // Current thresholds that trigger eStop
-uint16_t glThresholdTemp = 30;
-float glThresholdCurrent = 1.0;
-uint16_t countCurrentTicks = 0;
+uint16_t glThresholdTemp;
+float glThresholdCurrent;
+uint16_t countCurrentTicks;
 
-// Setup handles
+// Some handles accessed by sensor sub sub systems
+I2C_Handle lighti2c;
 UART_Handle uartTemp;
-char motorTempAddr;
 char boardTempAddr;
+char motorTempAddr;
+
+// Setup tasks, semaphores and swis
 Char taskLightStack[512];
 Char taskTempStack[512];
 Semaphore_Struct semLightStruct;
@@ -56,7 +57,6 @@ Clock_Struct clockAccelerationStruct;
 
 // Read and filter light over I2C
 void swiLight() {
-    // On sensor booster pack
     Semaphore_post(semLightHandle);
 }
 
@@ -69,14 +69,11 @@ void taskLight() {
         uint16_t rawData = 0;
         float converted;
 
-        if (sensorOpt3001Read(&rawData)) {
-            sensorOpt3001Convert(rawData, &converted);
+        if (OPT3001ReadLight(lighti2c, &rawData)) {
+            OPT3001Convert(rawData, &converted);
 
             lightBuffer[light_head++] = converted;
-            light_head %= windowLight;
-
-            //System_printf("Lux: %f\n", converted);
-            //System_flush();
+            light_head %= WINDOW_LIGHT;
         }
     }
 }
@@ -98,39 +95,35 @@ void taskTemp() {
     tx[0] = 0x55; // Calibration Byte
     // The daisy chain returns data starting from the address specified in the command or
     // address phase, and ending with the address of the first device in the daisy chain.
-    tx[1] = TMP107_Global_bit | TMP107_Read_bit | motorTempAddr;
+    tx[1] = TMP107_GLBOAL_BIT | TMP107_READ_BIT | motorTempAddr;
     tx[2] = TMP107_Temp_reg;
 
     while(1) {
         Semaphore_pend(semTempHandle, BIOS_WAIT_FOREVER);
 
         // Transmit global temperature read command
-        TMP107_Transmit(uartTemp, tx, tx_size);
+        TMP107Transmit(uartTemp, tx, tx_size);
         // Master cannot transmit again until after we've received
         // the echo of our transmit and given the TMP107 adequate
         // time to reply. thus, we wait.
         // Copy the response from TMP107 into user variable
-        TMP107_WaitForEcho(uartTemp, tx_size, rx, rx_size);
+        TMP107WaitForEcho(uartTemp, tx_size, rx, rx_size);
 
         // Convert two bytes received from TMP107 into degrees C
-        float boardTemp = TMP107_DecodeTemperatureResult(rx[3], rx[2]);
-        float motorTemp = TMP107_DecodeTemperatureResult(rx[1], rx[0]);
+        float boardTemp = TMP107DecodeTemperatureResult(rx[3], rx[2]);
+        float motorTemp = TMP107DecodeTemperatureResult(rx[1], rx[0]);
 
         // Variables for the ring buffer (not quite a ring buffer though)
         static uint8_t tempHead = 0;
         boardTempBuffer[tempHead] = boardTemp;
         motorTempBuffer[tempHead++] = motorTemp;
-        tempHead %= windowTemp;
+        tempHead %= WINDOW_TEMP;
 
         // Check if temperature threshold exceeded
         if (motorTemp > glThresholdTemp) {
             eStopMotor();
             eStopGUI();
         }
-
-        //System_printf("BTemp: %f\n", boardTemp);
-        //System_printf("MTemp: %f\n", motorTemp);
-        //System_flush();
     }
 }
 
@@ -172,14 +165,14 @@ void swiCurrent() {
     static uint8_t currentHead = 0;
     float current = (currentSensorB + currentSensorC) * 3 / 2;
     currentBuffer[currentHead++] = current;
-    currentHead %= windowCurrent;
+    currentHead %= WINDOW_POW_CURR;
 
     // Save power for graphing
     static uint8_t powerHead = 0;
     // P = V * I     using avg of the voltages
     float power = current * ((V_OutB + V_OutC) / 2);
     powerBuffer[powerHead++] = power;
-    powerHead %= windowCurrent; // windowCurrent deliberate
+    powerHead %= WINDOW_POW_CURR; // windowCurrent deliberate
 
     // Check if filtered current exceeds threshold
     // Don't check every cycle, too expensive
@@ -190,10 +183,10 @@ void swiCurrent() {
         // Check if current limit exceeded
         float sum = 0;
         uint8_t i;
-        for (i = 0; i < windowCurrent; i++) {
+        for (i = 0; i < WINDOW_POW_CURR; i++) {
             sum += currentBuffer[i];
         }
-        float avgCurrent = sum / windowCurrent;
+        float avgCurrent = sum / WINDOW_POW_CURR;
 
         //System_printf("C: %f\n", avgCurrent);
         //System_printf("V: %f %f\n", V_OutB, V_OutC);
@@ -225,8 +218,8 @@ bool initLight() {
     if (!lighti2c) {
         System_printf("Light I2C did not open\n");
     }
-    bool worked = sensorOpt3001Test();
-    sensorOpt3001Enable(true);
+    bool success = OPT3001Test(lighti2c);
+    OPT3001Enable(lighti2c, true);
 
     // Create task that reads light sensor
     // This retarded elaborate: swi - sem - task setup
@@ -254,22 +247,22 @@ bool initLight() {
 
     System_printf("Light setup\n");
     System_flush();
-    return true;
+    return success;
 }
 
 // TEMPERATURE SETUP
 bool initTemp(uint16_t thresholdTemp) {
     // Initialise UART
-    uartTemp = TMP107_InitUart();
+    uartTemp = TMP107InitUart();
 
     // Initialise daisy chain of two TMP107s
-    boardTempAddr = TMP107_Init(uartTemp);
-    motorTempAddr = TMP107_LastDevicePoll(uartTemp); // motor_addr var will be a backwards 5 bit
-    int device_count = TMP107_Decode5bitAddress(motorTempAddr);
+    boardTempAddr = TMP107Init(uartTemp);
+    motorTempAddr = TMP107LastDevicePoll(uartTemp); // motor_addr var will be a backwards 5 bit
+    int device_count = TMP107Decode5bitAddress(motorTempAddr);
 
     // Tell TMP107s to update in 500ms intervals
-    TMP107_Set_Config(uartTemp, boardTempAddr);
-    TMP107_Set_Config(uartTemp, motorTempAddr);
+    TMP107SetConfig(uartTemp, boardTempAddr);
+    TMP107SetConfig(uartTemp, motorTempAddr);
 
     // Create task that reads temp sensor
     // This retarded elaborate: swi - sem - task setup
@@ -362,11 +355,11 @@ float getLight() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowLight; i++) {
+    for (i = 0; i < WINDOW_LIGHT; i++) {
         sum += lightBuffer[i];
     }
 
-    return (sum / (float)windowLight);
+    return (sum / (float)WINDOW_LIGHT);
 }
 
 float getBoardTemp() {
@@ -374,20 +367,20 @@ float getBoardTemp() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowTemp; i++) {
+    for (i = 0; i < WINDOW_TEMP; i++) {
         sum += boardTempBuffer[i];
     }
-    return (sum / (float)windowTemp);}
+    return (sum / (float)WINDOW_TEMP);}
 
 float getMotorTemp() {
     float sum = 0;
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowTemp; i++) {
+    for (i = 0; i < WINDOW_TEMP; i++) {
         sum += motorTempBuffer[i];
     }
-    return (sum / (float)windowTemp);
+    return (sum / (float)WINDOW_TEMP);
 }
 
 float getCurrent() {
@@ -395,10 +388,10 @@ float getCurrent() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowCurrent; i++) {
+    for (i = 0; i < WINDOW_POW_CURR; i++) {
         sum += currentBuffer[i];
     }
-    return (sum / (float)windowCurrent);
+    return (sum / (float)WINDOW_POW_CURR);
 }
 
 float getPower() {
@@ -406,10 +399,10 @@ float getPower() {
 
     // This is fine since window is the size of the buffer
     uint8_t i;
-    for (i = 0; i < windowCurrent; i++) {
+    for (i = 0; i < WINDOW_POW_CURR; i++) {
         sum += powerBuffer[i];
     }
-    return (sum / (float)windowCurrent);
+    return (sum / (float)WINDOW_POW_CURR);
 }
 
 float getAcceleration() {

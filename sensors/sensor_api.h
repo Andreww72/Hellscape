@@ -10,7 +10,6 @@
 #include <ti/sysbios/knl/Clock.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
-#include <ti/drivers/GPIO.h>
 #include <ti/drivers/UART.h>
 #include <driverlib/adc.h>
 #include <driverlib/sysctl.h>
@@ -19,13 +18,9 @@
 
 #include "motor/motor_api.h"
 #include "ui/user_interface.h"
-#include "opt3001/i2cOptDriver.h" // i2OptDriver must go before opt3001
 #include "opt3001/opt3001.h"
 #include "tmp107/tmp107.h"
-#include "tmp107/hal.h"
 #include "bmi160/bmi160.h"
-
-I2C_Handle lighti2c;
 
 // Initialises all the sensors:
 // Light, board & motor temp, currents, acceleration, and eStop interrupts
