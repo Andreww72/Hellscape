@@ -18,6 +18,7 @@
 #define WINDOW_ACCEL        6
 
 // Data collectors (before filtering)
+float accelerationBuffer[windowAcceleration];
 float lightBuffer[WINDOW_LIGHT];
 float boardTempBuffer[WINDOW_TEMP];
 float motorTempBuffer[WINDOW_TEMP];
@@ -323,9 +324,11 @@ bool initAcceleration(uint16_t thresholdAccel) {
     clkSensorParams.period = 5;
     Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkSensorParams);
 
-    // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
+
+    sensorBmi160Init();
 
     // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
+    // I've leave this comment for now but we are no longer using this
 
     System_printf("Acceleration setup\n");
     System_flush();
@@ -370,7 +373,42 @@ float getMotorTemp() {
     return (sum / (float)WINDOW_TEMP);
 }
 
-float getCurrent() {
+// Read and filter acceleration on all three axes, and calculate absolute acceleration.
+// NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
+void swiAcceleration(UArg arg) {
+    static uint8_t accel_head = 0;
+    struct accel_data tmp_accel;
+
+    sensorBmi160GetAccelData(&tmp_accel);
+
+    float current_accel =
+            sqrt(
+                (float)tmp_accel.x * (float)tmp_accel.x +
+                (float)tmp_accel.y * (float)tmp_accel.y +
+                (float)tmp_accel.z * (float)tmp_accel.z
+            );
+
+    accelerationBuffer[accel_head++] = current_accel;
+
+    accel_head %= windowAcceleration;
+
+    if (current_accel > thresholdAccel){
+        callbackAccelerometer(NULL);
+    }
+
+}
+
+// Accelerometer interrupt when crash threshold reached
+void callbackAccelerometer(UArg arg) {
+    eStopMotor();
+}
+
+///////////**************??????????????
+//              Getters              //
+///////////**************??????????????
+
+float getLight() {
+    // Lux must be converted from the raw values as uint16_t is cheaper to store
     float sum = 0;
 
     // This is fine since window is the size of the buffer
@@ -393,7 +431,15 @@ float getPower() {
 }
 
 float getAcceleration() {
-    return 1;
+    // Calculate the average acceleration
+
+    float s = 0;
+    uint8_t i;
+    for(i=0; i<windowAcceleration; i++){
+        s+=accelerationBuffer[i];
+    }
+
+    return s/(float)windowAcceleration;
 }
 
 void setThresholdTemp(uint16_t thresholdTemp) {
@@ -404,8 +450,9 @@ void setThresholdCurrent(uint16_t thresholdCurrent) {
     glThresholdCurrent = (float)thresholdCurrent / 1000;
 }
 
-void setThresholdAccel(uint16_t thresholdAccel) {
-    // TODO Update BMI160 with new limit...
+void setThresholdAccel(uint16_t threshAccel) {
+    thresholdAccel = threshAccel;
+    // TODO Update BMI160 with new limit... -> no longer required
 }
 
 ///////////**************??????????????
