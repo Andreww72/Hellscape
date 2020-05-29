@@ -2,17 +2,17 @@
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
-#define POWER_VAL_HIGH 100
+#define POWER_VAL_HIGH 2
 #define AMB_TEMP_VAL_LOW 0
-#define AMB_TEMP_VAL_HIGH 100
+#define AMB_TEMP_VAL_HIGH 50
 #define SPEED_VAL_LOW 0
 #define SPEED_VAL_HIGH 6000
 #define ACCELERATION_VAL_LOW 0
-#define ACCELERATION_VAL_HIGH 100
+#define ACCELERATION_VAL_HIGH 50
 #define MOTOR_TEMP_VAL_LOW 0
-#define MOTOR_TEMP_VAL_HIGH 100
+#define MOTOR_TEMP_VAL_HIGH 50
 #define LIGHT_VAL_LOW 0
-#define LIGHT_VAL_HIGH 500
+#define LIGHT_VAL_HIGH 300
 
 // EEPROM
 #define E2PROM_ADRES 0x0000
@@ -23,7 +23,7 @@
 #define Y_GRAPH 55
 #define WIDTH_GRAPH 280
 #define HEIGHT_GRAPH 140
-#define MAX_PLOT_SAMPLES 20
+#define MAX_PLOT_SAMPLES 200
 
 // Graph min and max
 uint32_t minGraph;
@@ -531,7 +531,7 @@ static void DrawDataOnGraph(float lastSample)
 
     // Draw current value
     static char currentValue[30];
-    sprintf(currentValue, "%f", lastSample);
+    sprintf(currentValue, "%5.2f", lastSample);
     GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);

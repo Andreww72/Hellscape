@@ -55,8 +55,8 @@ Char taskUiStack[UI_TASKSTACKSIZE];
 Char taskSeStack[SE_TASKSTACKSIZE];
 tContext sContext;
 
-Clock_Struct clk0Struct;
-Clock_Struct clk1Struct;
+Clock_Struct clkUIStruct;
+Clock_Struct clkDrawStruct;
 Clock_Handle clkHandle;
 Clock_Handle clkHandleGraph;
 
@@ -137,10 +137,10 @@ void sensorsFxn() {
 }
 
 bool setupSensorsAndGUI(uint32_t ui32SysClock) {
-    // Init sensor setup task
     Task_Params taskParams;
     Task_Params_init(&taskParams);
 
+    // Init sensor setup task
     taskParams.stackSize = SE_TASKSTACKSIZE;
     taskParams.priority = 11;
     taskParams.stack = &taskSeStack;
@@ -159,12 +159,13 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
         System_abort("Task - GUI FAILED SETUP");
     }
 
+    // Increment date time by a second once a second
     Clock_Params clkParams;
     Clock_Params_init(&clkParams);
     clkParams.period = 1000;
     clkParams.startFlag = TRUE;
-    Clock_construct(&clk0Struct, (Clock_FuncPtr)ClockFxn, 1, &clkParams);
-    clkHandle = Clock_handle(&clk0Struct);
+    Clock_construct(&clkUIStruct, (Clock_FuncPtr)ClockFxn, 1, &clkParams);
+    clkHandle = Clock_handle(&clkUIStruct);
     if (clkHandle == NULL) {
         System_printf("Task - CLOCK SETUP FAILED");
         System_flush();
@@ -172,12 +173,10 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
     }
     Clock_start(clkHandle);
 
-    Clock_Params clkParamsGraph;
-    Clock_Params_init(&clkParamsGraph);
-    clkParamsGraph.period = 500;
-    clkParamsGraph.startFlag = TRUE;
-    Clock_construct(&clk1Struct, (Clock_FuncPtr)shouldDrawDataClock, 1, &clkParamsGraph);
-    clkHandleGraph = Clock_handle(&clk1Struct);
+    // Update an open graph at 10Hz
+    clkParams.period = 100;
+    Clock_construct(&clkDrawStruct, (Clock_FuncPtr)shouldDrawDataClock, 1, &clkParams);
+    clkHandleGraph = Clock_handle(&clkDrawStruct);
     if (clkHandleGraph == NULL) {
         System_printf("Task - CLOCK SETUP FAILED");
         System_flush();
