@@ -60,6 +60,7 @@ Clock_Struct clkDrawStruct;
 Clock_Handle clkHandle;
 Clock_Handle clkHandleGraph;
 
+bool isDay = false;
 bool shouldDrawDateTime = true;
 bool shouldDrawDataOnGraph = false;
 extern uint16_t drawingGraph;
@@ -92,6 +93,7 @@ void shouldDrawDataClock(UArg arg0) {
 
 // Draws the date, time
 void DrawDateTime() {
+    drawDayNight(getLight() > 5);
     if (shouldDrawDateTime && !drawingGraph) {
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
@@ -122,6 +124,7 @@ void userInterfaceFxn(UArg ui32SysClock) {
     }
 
     UserInterfaceInit(ui32SysClock, &sContext);
+
 
     while(1) {
         UserInterfaceDraw(&sContext);

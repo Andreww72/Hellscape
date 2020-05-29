@@ -223,7 +223,7 @@ void initLEDS() {
 
 void drawDayNight(bool isDay) {
     if (isDay) {
-        GrStringDrawCentered(&sContext, "Day", -1, 25, 8, true);
+        GrStringDrawCentered(&sContext, " Day ", -1, 25, 8, true);
         GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
     } else {
         GrStringDrawCentered(&sContext, "Night", -1, 25, 8, true);
@@ -712,7 +712,12 @@ void UserInterfaceInit(uint32_t systemclock, tContext * sContext)
     WidgetAdd((tWidget *)&g_sGraphPage, (tWidget *) &g_sGraph);
     WidgetAdd((tWidget *)&g_sGraphPage, (tWidget *) &g_sGraphActBack);
 
+    // Draw the home screen
     DrawHomeScreen();
+    WidgetMessageQueueProcess();
+
+    // Init as night
+    drawDayNight(0);
 }
 
 void UserInterfaceDraw(tContext * sContext) {
