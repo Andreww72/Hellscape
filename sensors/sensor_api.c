@@ -214,12 +214,18 @@ void swiAcceleration() {
 
     sensorBmi160GetAccelData(sensori2c, &tmp_accel);
 
-    float current_accel =
-            sqrt(
-                (float)tmp_accel.x * (float)tmp_accel.x +
-                (float)tmp_accel.y * (float)tmp_accel.y +
-                (float)tmp_accel.z * (float)tmp_accel.z
-            );
+    float sum =
+            (float)tmp_accel.x * (float)tmp_accel.x +
+            (float)tmp_accel.y * (float)tmp_accel.y +
+            (float)tmp_accel.z * (float)tmp_accel.z;
+
+    float current_accel;
+    if (sum == 0){
+        current_accel = 0;
+    } else {
+        current_accel == sqrt(sum);
+    }
+    //float current_accel = sum==0 ? sum : sqrt(sum);
 
     accelerationBuffer[accel_head++] = current_accel;
 
