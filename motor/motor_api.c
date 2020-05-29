@@ -84,15 +84,24 @@ void startMotor(int rpm) {
     motor_on = true;
     estop = false;
     motorUpdateFunc();
+
+    // Update LED to display status
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 1);
 }
 
 void eStopMotor() {
     estop = true;
     motor_on = false;
+
+    // Update LED to display status
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
 }
 
 void stopMotor_api() {
     motor_on = false;
+
+    // Update LED to display status
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
 }
 
 void setDesiredSpeed(int rpm) {

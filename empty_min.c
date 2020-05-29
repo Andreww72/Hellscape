@@ -96,6 +96,7 @@ void DrawDateTime() {
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
         shouldDrawDateTime = false;
+        //drawDayNight(1);
     }
 }
 
@@ -214,9 +215,6 @@ int main(void) {
 
     // Setup GUI and sensors
     setupSensorsAndGUI(ui32SysClock);
-
-    /* Turn on user LED  */
-    GPIO_write(Board_LED0, Board_LED_ON);
 
     /* Start BIOS */
     BIOS_start();

@@ -1,4 +1,5 @@
 #include "sensor_api.h"
+#include "ui/user_interface.h"
 
 // Sensor constants that don't have a separate file
 #define ADC_SEQB            1
@@ -52,6 +53,9 @@ Clock_Struct clockTempStruct;
 Clock_Struct clockCurrentStruct;
 Clock_Struct clockAccelerationStruct;
 
+// Keep track of if it's day or night
+uint8_t isDay = false;
+
 ///////////**************??????????????
 // Implementations of SWI functions  //
 ///////////**************??????????????
@@ -72,6 +76,13 @@ void taskLight() {
 
         if (OPT3001ReadLight(sensori2c, &rawData)) {
             OPT3001Convert(rawData, &converted);
+
+            // Handle day/night stuff
+            uint8_t isDayTemp = converted > 5;
+            if (isDayTemp != isDay) {
+                drawDayNight(isDay);
+                isDay = isDayTemp;
+            }
 
             lightBuffer[light_head++] = converted;
             light_head %= WINDOW_LIGHT;

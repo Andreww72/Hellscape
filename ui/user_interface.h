@@ -66,6 +66,8 @@ uint16_t s_y;
 uint16_t width;
 uint16_t height;
 
+void drawDayNight(bool isDay);
+
 // EEPROM
 void writeToEEPROM();
 

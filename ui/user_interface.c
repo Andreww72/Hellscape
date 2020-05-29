@@ -204,6 +204,34 @@ RectangularButton(g_sGraphActBack, &g_sGraphPage, 0, 0,
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
                    g_psFontCmss18b, "Back", 0, 0, 0, 0, returnFromGraph);
 
+void initLEDS() {
+    // Enable the GPIO port that is used for the on-board LED.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+
+    // Check if the peripheral access is enabled.
+    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION))
+    {
+    }
+
+    // Enable the GPIO pin for digital function.
+    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0);
+    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_1);
+
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 1);
+}
+
+void drawDayNight(bool isDay) {
+    if (isDay) {
+        GrStringDrawCentered(&sContext, "Day", -1, 25, 8, true);
+        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+    } else {
+        GrStringDrawCentered(&sContext, "Night", -1, 25, 8, true);
+        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
+    }
+    GrFlush(&sContext);
+}
+
 void removeAllWidgets() {
     WidgetRemove((tWidget *)(&g_sMenuTypePage));
     WidgetRemove((tWidget *)(&g_sMenuSetPage));
@@ -535,6 +563,14 @@ static void DrawDataOnGraph(float lastSample)
     GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);
+    tRectangle sRect;
+    sRect.i16XMin = 220;
+    sRect.i16YMin = 25;
+    sRect.i16XMax = 255;
+    sRect.i16YMax = 35;
+    GrContextForegroundSet(&sContext, 0x00595D69);
+    GrRectFill(&sContext, &sRect);
+    GrContextForegroundSet(&sContext, ClrWhite);
     GrStringDrawCentered(&sContext, "Current Value:", -1, 240, 15, true);
     GrStringDrawCentered(&sContext, "", 30, 240, 35, true); // draw a big blank line to remove overlap
     GrStringDrawCentered(&sContext, currentValue, -1, 240, 35, true);
@@ -623,6 +659,9 @@ void setupEEPROM() {
 
 void UserInterfaceInit(uint32_t systemclock, tContext * sContext)
 {
+    // Init LEDS
+    initLEDS();
+
     // EEPROM setup
     setupEEPROM();
 
