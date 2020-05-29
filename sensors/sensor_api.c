@@ -12,10 +12,10 @@
 #define CURR_CHECK_TICKS    250
 
 // Data window size constants
-#define WINDOW_LIGHT        5
-#define WINDOW_TEMP         3
+#define WINDOW_LIGHT        6
+#define WINDOW_TEMP         4
 #define WINDOW_POW_CURR     10
-#define WINDOW_ACCEL        5
+#define WINDOW_ACCEL        6
 
 // Data collectors (before filtering)
 float lightBuffer[WINDOW_LIGHT];
