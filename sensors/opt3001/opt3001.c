@@ -101,6 +101,7 @@ bool OPT3001WriteI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *d
 bool OPT3001ReadI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     I2C_Transaction i2cTransaction;
     uint8_t txBuf[1];
+    txBuf[0] = ui8Reg;
 
     i2cTransaction.slaveAddress = ui8Addr;
     i2cTransaction.writeBuf = txBuf;
@@ -108,7 +109,6 @@ bool OPT3001ReadI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *da
     i2cTransaction.readBuf = data;
     i2cTransaction.readCount = 2;
 
-    txBuf[0] = ui8Reg;
     I2C_transfer(i2c, &i2cTransaction);
     return true;
 }

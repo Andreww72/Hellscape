@@ -32,7 +32,7 @@ uint16_t countCurrentTicks;
 float glThresholdAccel;
 
 // Some handles accessed by sensor sub sub systems
-I2C_Handle lighti2c;
+I2C_Handle sensori2c;
 UART_Handle uartTemp;
 char boardTempAddr;
 char motorTempAddr;
@@ -70,7 +70,7 @@ void taskLight() {
         uint16_t rawData = 0;
         float converted;
 
-        if (OPT3001ReadLight(lighti2c, &rawData)) {
+        if (OPT3001ReadLight(sensori2c, &rawData)) {
             OPT3001Convert(rawData, &converted);
 
             lightBuffer[light_head++] = converted;
@@ -201,7 +201,7 @@ void swiAcceleration() {
     static uint8_t accel_head = 0;
     struct accel_data tmp_accel;
 
-    sensorBmi160GetAccelData(&tmp_accel);
+    sensorBmi160GetAccelData(sensori2c, &tmp_accel);
 
     float current_accel =
             sqrt(
@@ -226,14 +226,8 @@ void swiAcceleration() {
 ///////////**************??????????????
 // LIGHT SETUP
 bool initLight() {
-    I2C_Params i2cParams;
-    I2C_Params_init(&i2cParams);
-    lighti2c = I2C_open(Board_I2C2, &i2cParams);
-    if (!lighti2c) {
-        System_printf("Light I2C did not open\n");
-    }
-    bool success = OPT3001Test(lighti2c);
-    OPT3001Enable(lighti2c, true);
+    bool success = OPT3001Test(sensori2c);
+    OPT3001Enable(sensori2c, true);
 
     // Create task that reads temp sensor
     // This elaborate: swi - sem - task setup
@@ -338,16 +332,11 @@ bool initCurrent(uint16_t thresholdCurrent) {
 // Initialise sensors for acceleration on all three axes
 bool initAcceleration(uint16_t thresholdAccel) {
     setThresholdAccel(thresholdAccel);
+    sensorBmi160Init(sensori2c);
 
     // Create a recurring 200Hz SWI swi_acceleration
     clkSensorParams.period = 5;
     Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkSensorParams);
-
-
-    sensorBmi160Init();
-
-    // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
-    // I've leave this comment for now but we are no longer using this
 
     System_printf("Acceleration setup\n");
     System_flush();
@@ -359,11 +348,10 @@ bool initAcceleration(uint16_t thresholdAccel) {
 ///////////**************??????????????
 
 float getLight() {
-    // Lux must be converted from the raw values as uint16_t is cheaper to store
     float sum = 0;
+    uint8_t i;
 
     // This is fine since window is the size of the buffer
-    uint8_t i;
     for (i = 0; i < WINDOW_LIGHT; i++) {
         sum += lightBuffer[i];
     }
@@ -373,9 +361,8 @@ float getLight() {
 
 float getBoardTemp() {
     float sum = 0;
-
-    // This is fine since window is the size of the buffer
     uint8_t i;
+
     for (i = 0; i < WINDOW_TEMP; i++) {
         sum += boardTempBuffer[i];
     }
@@ -383,9 +370,8 @@ float getBoardTemp() {
 
 float getMotorTemp() {
     float sum = 0;
-
-    // This is fine since window is the size of the buffer
     uint8_t i;
+
     for (i = 0; i < WINDOW_TEMP; i++) {
         sum += motorTempBuffer[i];
     }
@@ -394,9 +380,8 @@ float getMotorTemp() {
 
 float getCurrent() {
     float sum = 0;
-
-    // This is fine since window is the size of the buffer
     uint8_t i;
+
     for (i = 0; i < WINDOW_POW_CURR; i++) {
         sum += currentBuffer[i];
     }
@@ -405,24 +390,20 @@ float getCurrent() {
 
 float getPower() {
     float sum = 0;
-
-    // This is fine since window is the size of the buffer
     uint8_t i;
+
     for (i = 0; i < WINDOW_POW_CURR; i++) {
         sum += powerBuffer[i];
     }
     return (sum / (float)WINDOW_POW_CURR);
 }
 
-// Read and filter acceleration on all three axes, and calculate absolute acceleration.
-// NOTE: THIS IS ACCELERATION OF THE BOARD, NOT THE MOTOR
 float getAcceleration() {
-    // Calculate the average acceleration
-
     float s = 0;
     uint8_t i;
-    for(i=0; i<WINDOW_ACCEL; i++){
-        s+=accelerationBuffer[i];
+
+    for(i = 0; i < WINDOW_ACCEL; i++){
+        s += accelerationBuffer[i];
     }
 
     return s/(float)WINDOW_ACCEL;
@@ -436,9 +417,8 @@ void setThresholdCurrent(uint16_t thresholdCurrent) {
     glThresholdCurrent = (float)thresholdCurrent / 1000;
 }
 
-void setThresholdAccel(float threshAccel) {
-    glThresholdAccel = threshAccel;
-    // TODO Update BMI160 with new limit... -> no longer required
+void setThresholdAccel(float thresholdAccel) {
+    glThresholdAccel = thresholdAccel;
 }
 
 ///////////**************??????????????
@@ -448,6 +428,14 @@ bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thr
     // Used by separate init functions to create recurring SWIs. Period size is 1ms.
     Clock_Params_init(&clkSensorParams);
     clkSensorParams.startFlag = TRUE;
+
+    // I2C used by both OPT3001 and BMI160
+    I2C_Params i2cParams;
+    I2C_Params_init(&i2cParams);
+    sensori2c = I2C_open(Board_I2C2, &i2cParams);
+    if (!sensori2c) {
+        System_printf("Sensor I2C did not open\n");
+    }
 
     return
             initLight() &&
