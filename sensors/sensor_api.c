@@ -24,7 +24,7 @@ uint16_t lightBuffer[windowLight];
 uint8_t boardTempBuffer[windowTemp];
 uint8_t motorTempBuffer[windowTemp];
 float currentBuffer[windowCurrent];
-uint8_t accelerationBuffer[windowAcceleration];
+float accelerationBuffer[windowAcceleration];
 
 // Thresholds that trigger eStop
 uint8_t thresholdTemp = 40;
@@ -230,9 +230,11 @@ bool initAcceleration(uint16_t threshAccel) {
     clkParams.period = 5;
     Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkParams);
 
-    // TODO Setup BMI160 Inertial Measurement Sensor. Probably I2C?
+
+    sensorBmi160Init();
 
     // TODO Setup callback_accelerometer to trigger if acceleration above threshold. Like our light lab task interrupt.
+    // I've leave this comment for now but we are no longer using this
 
     System_printf("Acceleration setup\n");
     System_flush();
@@ -357,12 +359,33 @@ void swiCurrent(UArg arg) {
     }
 }
 
+
+//struct accel_data   ac_data[200];
+//struct gyr_data     gy_data[200];
+
 // Read and filter acceleration on all three axes, and calculate absolute acceleration.
 // NOTE: THIS IS AC CELERATION OF THE BOARD, NOT THE MOTOR
 void swiAcceleration(UArg arg) {
-    // BMI160 Inertial Measurement Sensor
-    // TODO Get acceleration readings on three axes
-    // ABS is calculated from those three in a getter
+    static uint8_t accel_head = 0;
+    struct accel_data tmp_accel;
+
+    sensorBmi160GetAccelData(&tmp_accel);
+
+    float current_accel =
+            sqrt(
+                (float)tmp_accel.x * (float)tmp_accel.x +
+                (float)tmp_accel.y * (float)tmp_accel.y +
+                (float)tmp_accel.z * (float)tmp_accel.z
+            );
+
+    accelerationBuffer[accel_head++] = current_accel;
+
+    accel_head %= windowAcceleration;
+
+    if (current_accel > thresholdAccel){
+        callbackAccelerometer(NULL);
+    }
+
 }
 
 // Accelerometer interrupt when crash threshold reached
@@ -408,8 +431,16 @@ float getCurrent() {
     return ((sum / (float)windowCurrent) * 3.0 / 2.0);
 }
 
-uint8_t getAcceleration() {
-    return 1;
+float getAcceleration() {
+    // Calculate the average acceleration
+
+    float s = 0;
+    uint8_t i;
+    for(i=0; i<windowAcceleration; i++){
+        s+=accelerationBuffer[i];
+    }
+
+    return s/(float)windowAcceleration;
 }
 
 void setThresholdTemp(uint8_t threshTemp) {
@@ -423,5 +454,5 @@ void setThresholdCurrent(uint16_t threshCurrent) {
 
 void setThresholdAccel(uint16_t threshAccel) {
     thresholdAccel = threshAccel;
-    // TODO Update BMI160 with new limit...
+    // TODO Update BMI160 with new limit... -> no longer required
 }
