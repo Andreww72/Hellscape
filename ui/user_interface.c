@@ -20,7 +20,7 @@
 
 // Graph bounds
 #define X_GRAPH 20
-#define Y_GRAPH 55
+#define Y_GRAPH 35
 #define WIDTH_GRAPH 280
 #define HEIGHT_GRAPH 140
 #define MAX_PLOT_SAMPLES 200
@@ -198,7 +198,7 @@ Canvas(g_sGraph, &g_sGraphPage, 0, 0,
        CANVAS_STYLE_FILL, 0x00595D69, 0, 0, 0, 0, 0, 0);
 
 RectangularButton(g_sGraphActBack, &g_sGraphPage, 0, 0,
-                  &g_sKentec320x240x16_SSD2119, 10, 219, 300, 20,
+                  &g_sKentec320x240x16_SSD2119, 10, 204, 300, 35,
                   (PB_STYLE_OUTLINE | PB_STYLE_TEXT_OPAQUE | PB_STYLE_TEXT |
                     PB_STYLE_FILL | PB_STYLE_RELEASE_NOTIFY),
                     0x002546A1, ClrBlack, ClrWhite, ClrWhite,
@@ -453,17 +453,17 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     WidgetMessageQueueProcess();
 
     // Draw the graph
-    GrStringDraw(&sContext, "Time", -1, 130, 202, false);
-    GrLineDrawV(&sContext, 10, 45, 200);
-    GrLineDrawH(&sContext, 10, 305, 200);
+    GrStringDraw(&sContext, "Time", -1, 130, 182, false);
+    GrLineDrawV(&sContext, 10, 45, 180);
+    GrLineDrawH(&sContext, 10, 305, 180);
     GrLineDraw(&sContext, 10, 45, 8,50);
     GrLineDraw(&sContext, 10, 45, 12, 50);
-    GrLineDraw(&sContext, 305, 200, 303, 198);
-    GrLineDraw(&sContext, 305, 200, 303, 202);
+    GrLineDraw(&sContext, 305, 180, 303, 178);
+    GrLineDraw(&sContext, 305, 180, 303, 182);
 
     // Plot title, and y-axis limits
     GrStringDraw(&sContext, title, -1, 5, 15, true);
-    GrStringDraw(&sContext, lowLimit, -1, 10, 202, false);
+    GrStringDraw(&sContext, lowLimit, -1, 10, 182, false);
     GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
 
     // Get pointer to data we want to be drawing

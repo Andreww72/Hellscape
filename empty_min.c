@@ -117,7 +117,7 @@ void userInterfaceFxn(UArg ui32SysClock) {
         System_printf("Time - GET TIME FAILED");
         System_flush();
         // Set to a reasonable time
-        t1 = 3798880499;
+        t1 = 3800284593;
     }
 
     UserInterfaceInit(ui32SysClock, &sContext);
