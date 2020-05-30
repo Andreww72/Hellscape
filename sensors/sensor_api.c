@@ -11,7 +11,6 @@
 #define ADC_GAIN            10.0 // FAQ
 #define ADC_RESOLUTION      4095.0 // Page 1861 says resolution 12 bits
 #define CURR_CHECK_TICKS    250
-#define ACCEL_GRAVITY       9.8
 
 // Data window size constants
 #define WINDOW_LIGHT        6
@@ -218,7 +217,7 @@ void taskAcceleration() {
         Semaphore_pend(semAccelHandle, BIOS_WAIT_FOREVER);
         struct accel_data tmp_accel;
 
-        sensorBmi160GetAccelData(sensori2c, &tmp_accel);
+        BMI160GetAccelData(sensori2c, &tmp_accel);
 
         float sum =
                 tmp_accel.x * tmp_accel.x +
@@ -229,11 +228,10 @@ void taskAcceleration() {
         if (sum == 0){
             current_accel = 0;
         } else {
-            current_accel = abs(sqrt(sum) - ACCEL_GRAVITY);
+            current_accel = fabs(sqrt(sum));
         }
 
         accelerationBuffer[accel_head++] = current_accel;
-
         accel_head %= WINDOW_ACCEL;
 
         if (current_accel > glThresholdAccel){
@@ -339,11 +337,23 @@ bool initCurrent(uint16_t thresholdCurrent) {
     return true;
 }
 
+void callbackTriggerAccelEStop(unsigned int index) {
+    System_printf("Accel callback\n");
+    System_flush();
+    //eStopMotor();
+    //eStopGUI();
+    // Clear BMI160 latched interrupt statusGPIOPinTypeGPIOInput
+}
+
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 bool initAcceleration(uint16_t thresholdAccel) {
     setThresholdAccel(thresholdAccel);
-    sensorBmi160Init(sensori2c);
+    BMI160Init(sensori2c);
+
+    // Create D4 GPIO interrupt
+    GPIO_setCallback(Board_BMI160_INT, callbackTriggerAccelEStop);
+    GPIO_enableInt(Board_BMI160_INT);
 
     // Create task that reads temp sensor
     // This elaborate: swi - sem - task setup
@@ -445,6 +455,7 @@ void setThresholdCurrent(uint16_t thresholdCurrent) {
 
 void setThresholdAccel(uint16_t thresholdAccel) {
     glThresholdAccel = thresholdAccel;
+    BMI160InterruptThreshold(sensori2c, thresholdAccel);
 }
 
 ///////////**************??????????????

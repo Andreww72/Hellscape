@@ -16,6 +16,8 @@
 #define BMI160_INT_LATCH_REG            0x54
 #define BMI160_INT_MAP_0_REG            0x55
 #define BMI160_INT_DATA_0_REG           0x58
+#define BMI160_INT_DELAY_REG            0x5D
+#define BMI160_INT_THRESHOLD_REG        0x5E
 
 // Data from lsb to msb, x,y,z, mag, rhall,gyr,acc
 #define BMI160_DATA_REG                 0x04
@@ -24,9 +26,10 @@
 
 #define MAX_16_INT                      65536
 #define BMI160_RESOLUTION               8192.0
-#define BMI160_G_TO_MPS                 9.8
+#define BMI160_G_TO_MPS                 10.2
+#define BMI160_mG_PER_BIT               0.01563
 
-bool sensorBmi160Init(I2C_Handle i2c) {
+bool BMI160Init(I2C_Handle i2c) {
     uint8_t conf;
 
     // BMI160_ACC_CONF_REG -> Page 83 of BMI160
@@ -44,18 +47,38 @@ bool sensorBmi160Init(I2C_Handle i2c) {
 
     // The following are all interrupt settings
     // Interrupt for high g -> will happen in a crash
-    // conf = 0b111; //high g[z,y,x] -> interrupt no longer required
-    //bmi160_writeI2C(BMI160_I2C_ADDR, BMI160_INT_EN_1_REG, &conf, 1);
-    //Actually just disable interrupts
-    conf = 0;
-    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_EN_0_REG, &conf);
-
-    conf = 0;
+    // INT_EN (0x50-0x52)
+    conf = 0b111;
     BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_EN_1_REG, &conf);
+
+    // INT_OUT_CTRL (0x53)
+    conf = 0b1111; // Not sure on last bit
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_OUT_CTRL_REG, &conf);
+
+    // INT_LATCH (0x54)
+    conf = 0b11010;
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_LATCH_REG, &conf);
+
+    // INT_MAP (0x55-0x57)
+    conf = 0b10;
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_MAP_0_REG, &conf);
+
+    // INT_LOWHIGH (0x5A-0x5E)
+    conf = 1; // High-g delay time (30ms default) 2.5ms
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_DELAY_REG, &conf);
+    conf = 255; // High-g threshold (15.63mG per bit)
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_THRESHOLD_REG, &conf);
+
+    // INT_STATUS REG (0x1C-0x1F) holds triggered status (must clear if in latched)
     return true;
 }
 
-bool sensorBmi160GetAccelData(I2C_Handle i2c, struct accel_data *data){
+void BMI160InterruptThreshold(I2C_Handle i2c, uint8_t threshold) {
+    uint8_t bitThreshold = (float)threshold / (BMI160_mG_PER_BIT * BMI160_G_TO_MPS);
+    BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_INT_THRESHOLD_REG, &bitThreshold);
+}
+
+bool BMI160GetAccelData(I2C_Handle i2c, struct accel_data *data){
     uint8_t data_arr[6] = {0};
 
     BMI160ReadI2C(i2c, BMI160_I2C_ADDR, BMI160_DATA_ACC_REG, data_arr, 6);
