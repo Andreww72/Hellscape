@@ -8,7 +8,7 @@
 #define SPEED_VAL_LOW 0
 #define SPEED_VAL_HIGH 6000
 #define ACCELERATION_VAL_LOW 0
-#define ACCELERATION_VAL_HIGH 50
+#define ACCELERATION_VAL_HIGH 20
 #define MOTOR_TEMP_VAL_LOW 0
 #define MOTOR_TEMP_VAL_HIGH 50
 #define LIGHT_VAL_LOW 0
@@ -36,8 +36,8 @@ int motorState = 0;
 int homeScreenFlag = 1;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 40}; /* Write struct: Temp | Speed | Current | Accel */
-uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 40}; /* Read struct */
+uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 10}; /* Write struct: Temp | Speed | Current | Accel */
+uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 10}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -365,7 +365,7 @@ static void increaseSetting() {
             setThresholdCurrent((uint16_t)motorCurrentLimit);
             break;
         case acceleration:
-            doChangeToSetting(5);
+            doChangeToSetting(1);
             setThresholdAccel((uint16_t)motorAccelerationLimit);
             break;
         default:
@@ -394,8 +394,8 @@ static void decreaseSetting() {
             break;
         case acceleration:
             if (motorAccelerationLimit > 0) {
-                doChangeToSetting(-5);
-                setThresholdTemp((uint16_t)motorAccelerationLimit);
+                doChangeToSetting(-1);
+                setThresholdAccel((uint16_t)motorAccelerationLimit);
             }
             break;
         default:

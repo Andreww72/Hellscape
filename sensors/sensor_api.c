@@ -11,12 +11,17 @@
 #define ADC_GAIN            10.0 // FAQ
 #define ADC_RESOLUTION      4095.0 // Page 1861 says resolution 12 bits
 #define CURR_CHECK_TICKS    250
+#define ACCEL_GRAVITY       9.8
 
 // Data window size constants
 #define WINDOW_LIGHT        6
 #define WINDOW_TEMP         4
 #define WINDOW_POW_CURR     10
 #define WINDOW_ACCEL        6
+#define RATE_LIGHT          500 // 2Hz
+#define RATE_TEMP           500 // 2Hz
+#define RATE_POW_CURR       4   // 250Hz
+#define RATE_ACCEL          5   // 200Hz
 
 // Data collectors (before filtering)
 float lightBuffer[WINDOW_LIGHT];
@@ -216,15 +221,15 @@ void taskAcceleration() {
         sensorBmi160GetAccelData(sensori2c, &tmp_accel);
 
         float sum =
-                (float)tmp_accel.x * (float)tmp_accel.x +
-                (float)tmp_accel.y * (float)tmp_accel.y +
-                (float)tmp_accel.z * (float)tmp_accel.z;
+                tmp_accel.x * tmp_accel.x +
+                tmp_accel.y * tmp_accel.y +
+                tmp_accel.z * tmp_accel.z;
 
         float current_accel;
         if (sum == 0){
             current_accel = 0;
         } else {
-            current_accel = sqrt(sum);
+            current_accel = abs(sqrt(sum) - ACCEL_GRAVITY);
         }
 
         accelerationBuffer[accel_head++] = current_accel;
@@ -266,10 +271,6 @@ bool initLight() {
         System_printf("Task - LIGHT FAILED SETUP");
     }
 
-    // Create a recurring 2Hz SWI swi_light to post semaphore
-    clkSensorParams.period = 500;
-    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, 1, &clkSensorParams);
-
     System_printf("Light setup\n");
     return success;
 }
@@ -309,10 +310,6 @@ bool initTemp(uint16_t thresholdTemp) {
         return false;
     }
 
-    // Create a recurring 2Hz SWI swi_temp
-    clkSensorParams.period = 500;
-    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiTemp, 1, &clkSensorParams);
-
     System_printf("Temperature setup\n");
     return true;
 }
@@ -337,9 +334,6 @@ bool initCurrent(uint16_t thresholdCurrent) {
     ADCSequenceStepConfigure(ADC1_BASE, ADC_SEQC, ADC_STEP, ADC_CTL_IE | ADC_CTL_CH0 | ADC_CTL_END);
     ADCSequenceEnable(ADC1_BASE, ADC_SEQC);
     ADCIntClear(ADC1_BASE, ADC_SEQC);
-
-    clkSensorParams.period = 4;
-    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, 1, &clkSensorParams);
 
     System_printf("Current setup\n");
     return true;
@@ -371,12 +365,7 @@ bool initAcceleration(uint16_t thresholdAccel) {
         System_printf("Task - ACCEL FAILED SETUP");
     }
 
-    // Create a recurring 200Hz SWI swi_acceleration
-    clkSensorParams.period = 5;
-    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, 1, &clkSensorParams);
-
     System_printf("Acceleration setup\n");
-    System_flush();
     return true;
 }
 
@@ -454,7 +443,7 @@ void setThresholdCurrent(uint16_t thresholdCurrent) {
     glThresholdCurrent = (float)thresholdCurrent / 1000;
 }
 
-void setThresholdAccel(float thresholdAccel) {
+void setThresholdAccel(uint16_t thresholdAccel) {
     glThresholdAccel = thresholdAccel;
 }
 
@@ -462,21 +451,43 @@ void setThresholdAccel(float thresholdAccel) {
 // God tier make everything work fxn //
 ///////////**************??????????????
 bool initSensors(uint16_t thresholdTemp, uint16_t thresholdCurrent, uint16_t thresholdAccel) {
-    // Used by separate init functions to create recurring SWIs. Period size is 1ms.
-    Clock_Params_init(&clkSensorParams);
-    clkSensorParams.startFlag = TRUE;
-
     // I2C used by both OPT3001 and BMI160
     I2C_Params i2cParams;
     I2C_Params_init(&i2cParams);
+    i2cParams.bitRate = I2C_400kHz;
+    i2cParams.transferMode = I2C_MODE_BLOCKING;
+    i2cParams.transferCallbackFxn = NULL;
     sensori2c = I2C_open(Board_I2C2, &i2cParams);
     if (!sensori2c) {
         System_printf("Sensor I2C did not open\n");
     }
 
-    return
-            initLight() &&
-            initTemp(thresholdTemp) &&
-            initCurrent(thresholdCurrent) &&
-            initAcceleration(thresholdAccel);
+    initLight();
+    initTemp(thresholdTemp);
+    initCurrent(thresholdCurrent);
+    initAcceleration(thresholdAccel);
+    System_flush();
+
+    // Used by separate init functions to create recurring SWIs. Period size is 1ms.
+    Clock_Params_init(&clkSensorParams);
+    clkSensorParams.startFlag = TRUE;
+    int timeout = 1;
+
+    // Create a recurring 2Hz SWI swiLight to post semaphore for task
+    clkSensorParams.period = RATE_LIGHT;
+    Clock_construct(&clockLightStruct, (Clock_FuncPtr)swiLight, timeout, &clkSensorParams);
+
+    // Create a recurring 2Hz SWI swiTemp to post semaphore for task
+    clkSensorParams.period = RATE_TEMP;
+    Clock_construct(&clockTempStruct, (Clock_FuncPtr)swiTemp, timeout, &clkSensorParams);
+
+    // Create a recurring 250Hz SWI swiCurrent
+    clkSensorParams.period = RATE_POW_CURR;
+    Clock_construct(&clockCurrentStruct, (Clock_FuncPtr)swiCurrent, timeout, &clkSensorParams);
+
+    // Create a recurring 200Hz SWI swiAcceleration to post semaphore for task
+    clkSensorParams.period = RATE_ACCEL;
+    Clock_construct(&clockAccelerationStruct, (Clock_FuncPtr)swiAcceleration, timeout, &clkSensorParams);
+
+    return true;
 }

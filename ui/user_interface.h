@@ -1,10 +1,3 @@
-/*
- * user_interface.h
- *
- *  Created on: May 1, 2020
- *      Author: Lachlan
- */
-
 #ifndef UI_USER_INTERFACE_H_
 #define UI_USER_INTERFACE_H_
 
