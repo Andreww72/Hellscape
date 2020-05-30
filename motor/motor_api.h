@@ -1,11 +1,3 @@
-/*
- * motor_api.h
- *
- *  Created on: 3 May 2020
- *      Author: jshea
- */
-
-
 #include <stdbool.h>
 #include <xdc/runtime/Error.h>
 #include <xdc/runtime/System.h>

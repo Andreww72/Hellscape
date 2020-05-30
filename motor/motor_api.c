@@ -1,14 +1,5 @@
-/*
- * motor_api.c
- *
- *  Created on: 3 May 2020
- *      Author: jshea
- *
- *      The author would like to note that the suppressions present throughout the script are due to what appears to be a CCStudio
- *      bug, as the code compiles and runs without issue despite this "ambiguous function" nonsense.
- *
- *      TL;DR: CCStudio is a piece of poo
- */
+// The author would like to note that the suppressions present throughout the script are due to what appears to be a CCStudio
+// bug, as the code compiles and runs without issue despite this "ambiguous function" nonsense.
 
 #include "motor_api.h"
 

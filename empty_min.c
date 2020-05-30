@@ -134,7 +134,7 @@ void userInterfaceFxn(UArg ui32SysClock) {
 
 void sensorsFxn() {
     // Default threshold integer parameters: degrees C, mA, m/s^2
-    if (!initSensors(30, 1500, 40)) {
+    if (!initSensors(30, 1500, 10)) {
         System_abort("Failed sensor init");
         System_flush();
     }
