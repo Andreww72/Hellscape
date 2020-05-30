@@ -78,6 +78,7 @@ static char * getCurrentDateTime() {
         timeinfo->tm_hour -= 24;
         timeinfo->tm_mday +=1;
     }
+    strcpy(t, " "); // add an extra space
     strcpy(t, asctime(timeinfo));
     return t;
 }
@@ -134,7 +135,7 @@ void userInterfaceFxn(UArg ui32SysClock) {
 
 void sensorsFxn() {
     // Default threshold integer parameters: degrees C, mA, m/s^2
-    if (!initSensors(30, 1500, 10)) {
+    if (!initSensors(30, 1500, 20)) {
         System_abort("Failed sensor init");
         System_flush();
     }

@@ -2,13 +2,13 @@
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
-#define POWER_VAL_HIGH 2
+#define POWER_VAL_HIGH 5
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 50
 #define SPEED_VAL_LOW 0
 #define SPEED_VAL_HIGH 6000
 #define ACCELERATION_VAL_LOW 0
-#define ACCELERATION_VAL_HIGH 20
+#define ACCELERATION_VAL_HIGH 30
 #define MOTOR_TEMP_VAL_LOW 0
 #define MOTOR_TEMP_VAL_HIGH 50
 #define LIGHT_VAL_LOW 0
@@ -36,8 +36,8 @@ int motorState = 0;
 int homeScreenFlag = 1;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 10}; /* Write struct: Temp | Speed | Current | Accel */
-uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 10}; /* Read struct */
+uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 20}; /* Write struct: Temp | Speed | Current | Accel */
+uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 20}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -205,29 +205,17 @@ RectangularButton(g_sGraphActBack, &g_sGraphPage, 0, 0,
                    g_psFontCmss18b, "Back", 0, 0, 0, 0, returnFromGraph);
 
 void initLEDS() {
-    // Enable the GPIO port that is used for the on-board LED.
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-
-    // Check if the peripheral access is enabled.
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION))
-    {
-    }
-
-    // Enable the GPIO pin for digital function.
-    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0);
-    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_1);
-
-    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
-    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 1);
+    GPIO_write(Board_LED0, Board_LED_ON);
+    GPIO_write(Board_LED1, Board_LED_OFF);
 }
 
 void drawDayNight(bool isDay) {
     if (isDay) {
         GrStringDrawCentered(&sContext, " Day ", -1, 25, 8, true);
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 0);
+        GPIO_write(Board_LED0, Board_LED_OFF);
     } else {
         GrStringDrawCentered(&sContext, "Night", -1, 25, 8, true);
-        GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_0, 1);
+        GPIO_write(Board_LED0, Board_LED_ON);
     }
     GrFlush(&sContext);
 }
@@ -393,7 +381,7 @@ static void decreaseSetting() {
             }
             break;
         case acceleration:
-            if (motorAccelerationLimit > 0) {
+            if (motorAccelerationLimit >= 12) {
                 doChangeToSetting(-1);
                 setThresholdAccel((uint16_t)motorAccelerationLimit);
             }
@@ -490,9 +478,9 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     GrLineDraw(&sContext, 305, 180, 303, 182);
 
     // Plot title, and y-axis limits
-    GrStringDraw(&sContext, title, -1, 5, 15, true);
+    GrStringDraw(&sContext, title, -1, 5, 7, true);
     GrStringDraw(&sContext, lowLimit, -1, 10, 182, false);
-    GrStringDraw(&sContext, highLimit, -1, 18, 38, false);
+    GrStringDraw(&sContext, highLimit, -1, 5, 30, false);
 
     // Get pointer to data we want to be drawing
     float (*data_ptr)();
@@ -554,6 +542,7 @@ static void DrawDataOnGraph(float lastSample)
         pointsCount = 0;
         WidgetPaint((tWidget *) &g_sGraph);
         WidgetMessageQueueProcess();
+        GrStringDraw(&sContext, highLimit, -1, 5, 33, false);
         return;
     }
 
