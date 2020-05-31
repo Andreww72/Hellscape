@@ -2,7 +2,7 @@
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
-#define POWER_VAL_HIGH 5
+#define POWER_VAL_HIGH 2
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 50
 #define SPEED_VAL_LOW 0
@@ -26,8 +26,8 @@
 #define MAX_PLOT_SAMPLES 200
 
 // Graph min and max
-uint32_t minGraph;
-uint32_t maxGraph;
+int32_t minGraph;
+int32_t maxGraph;
 
 // Get sContext for empty_min.c externally
 extern tContext sContext;
@@ -218,6 +218,14 @@ void drawDayNight(bool isDay) {
         GPIO_write(Board_LED0, Board_LED_ON);
     }
     GrFlush(&sContext);
+}
+
+void ledDayNight(bool isDay) {
+    if (isDay) {
+        GPIO_write(Board_LED0, Board_LED_OFF);
+    } else {
+        GPIO_write(Board_LED0, Board_LED_ON);
+    }
 }
 
 void removeAllWidgets() {
@@ -485,7 +493,7 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     // Get pointer to data we want to be drawing
     float (*data_ptr)();
     if (graphPageIdentifier == powerGraph){
-        data_ptr = &getCurrent;
+        data_ptr = &getPower;
     } else if (graphPageIdentifier == ambTempGraph) {
         data_ptr = &getBoardTemp;
     } else if (graphPageIdentifier == speedGraph) {
@@ -505,6 +513,7 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
     while (drawingGraph) {
         // Only draw periodically
         if (shouldDrawDataOnGraph) { // updated in shouldDrawDataClock() every period
+            ledDayNight(getLight() > 5);
             DrawDataOnGraph((float) (*data_ptr)());
             shouldDrawDataOnGraph = false;
         }
@@ -512,14 +521,11 @@ static void setupGraphScreen(char * title, int yMin, int yMax)
         // Continue to process
         WidgetMessageQueueProcess();
     }
-    // AddValueToGraph(50, powerGraph);
-    // AddValueToGraph(50, powerGraph);
-    // DrawDataOnGraph(yMin, yMax, rand() % 100);
 }
 
 // Graphs the chosen data on the map and scales accordingly
 uint16_t pointsCount = 0;
-uint16_t previousSample = 0;
+float previousSample = 0;
 static void returnFromGraph()
 {
     DrawGraphMenuScreen();
@@ -542,7 +548,7 @@ static void DrawDataOnGraph(float lastSample)
         pointsCount = 0;
         WidgetPaint((tWidget *) &g_sGraph);
         WidgetMessageQueueProcess();
-        GrStringDraw(&sContext, highLimit, -1, 5, 33, false);
+        GrStringDraw(&sContext, highLimit, -1, 5, 30, false);
         return;
     }
 
@@ -570,7 +576,7 @@ static void DrawDataOnGraph(float lastSample)
     float xscale = (float)width/(float)MAX_PLOT_SAMPLES;
 
     // Declare line coordinates
-    uint16_t x1, x2, y1, y2;
+    int32_t x1, x2, y1, y2;
 
     // Draw onto graph
     x1 = (pointsCount * xscale) + s_x;
@@ -630,9 +636,6 @@ void writeToEEPROM(uint32_t settings[4]) {
 void setupEEPROM() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_EEPROM0); // EEPROM activate
     EEPROMInit(); // EEPROM start
-
-    // Clear EEPROM
-    EEPROMMassErase();
 
     // Read the settings
     EEPROMRead((uint32_t *)&e2prom_read_settings, E2PROM_ADRES, sizeof(e2prom_read_settings));

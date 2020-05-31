@@ -23,7 +23,6 @@
 #include <xdc/runtime/System.h>
 #include "driverlib/eeprom.h"
 #include "driverlib/sysctl.h"
-
 #include "../sensors/sensor_api.h"
 #include "../motor/motor_api.h"
 
@@ -31,7 +30,6 @@ uint32_t motorTemperatureLimit;
 uint32_t motorSpeedLimit;
 uint32_t motorCurrentLimit;
 uint32_t motorAccelerationLimit;
-
 uint16_t drawingGraph;
 
 enum page {

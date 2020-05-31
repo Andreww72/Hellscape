@@ -6,7 +6,7 @@
 #define PWM 50.0
 #define SYSTICK_PER_MIN 6000.0
 #define PHASES_PER_ROTATION 24
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 6
 #define MIN_RPM 200
 #define MAX_CUM_ERROR 9000
 #define ACCEL_PER_TICK 3
@@ -121,7 +121,7 @@ void checkSpeedSwi() {
     key = GateHwi_enter(gateHwi); // @suppress("Invalid arguments")
 
     // If we're trying to accelerate, give the motor another lil push
-    // Courtesy of friction, sometimes the bastard just won't start
+    // Courtesy of friction, sometimes it just won't start
     if (!speed_rpm && motor_on) {
         motorUpdateFunc();
     }
@@ -161,8 +161,8 @@ void checkSpeedSwi() {
     // Add this measurement to buffer
     rpm_buffer[rpm_index] = rotations * (SYSTICK_PER_MIN / PHASES_PER_ROTATION);
 
-    rotations = 0; // reset rotations
-    rpm_index++; // increment index
+    rotations = 0; // Reset rotations
+    rpm_index++; // Increment index
     if (rpm_index >= BUFFER_SIZE) { // Reset index counter as necessary
         rpm_index = 0;
     }

@@ -153,8 +153,8 @@ sensors/tmp107/tmp107.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_2
 sensors/tmp107/tmp107.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Task__epilogue.h
 sensors/tmp107/tmp107.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/package/Task_SupportProxy.h
 sensors/tmp107/tmp107.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h
-sensors/tmp107/tmp107.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/Board.h
-sensors/tmp107/tmp107.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/EK_TM4C1294XL.h
+sensors/tmp107/tmp107.obj: C:/Users/jshea/Documents/EGH456/Board.h
+sensors/tmp107/tmp107.obj: C:/Users/jshea/Documents/EGH456/EK_TM4C1294XL.h
 
 ../sensors/tmp107/tmp107.c: 
 ../sensors/tmp107/tmp107.h: 
@@ -309,5 +309,5 @@ C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/inter
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Task__epilogue.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/package/Task_SupportProxy.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/Board.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/EK_TM4C1294XL.h: 
+C:/Users/jshea/Documents/EGH456/Board.h: 
+C:/Users/jshea/Documents/EGH456/EK_TM4C1294XL.h: 

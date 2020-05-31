@@ -1,25 +1,16 @@
-/* XDCtools Header files */
-#include <xdc/std.h>
-#include <xdc/runtime/System.h>
-#include <xdc/runtime/Error.h>
-
-/* BIOS Header files */
-#include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Task.h>
-#include <ti/sysbios/hal/Hwi.h>
-#include <ti/sysbios/knl/Clock.h>
-
-/* TI-RTOS Header files */
-#include <ti/drivers/GPIO.h>
-
-/* Board Header file */
-#include "Board.h"
-
-/* Custom API */
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <xdc/std.h>
+#include <xdc/runtime/System.h>
+#include <xdc/runtime/Error.h>
+#include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Task.h>
+#include <ti/sysbios/hal/Hwi.h>
+#include <ti/sysbios/knl/Clock.h>
+#include <ti/drivers/GPIO.h>
+#include "Board.h"
 #include "inc/hw_gpio.h"
 #include "inc/hw_hibernate.h"
 #include "inc/hw_ints.h"
@@ -43,7 +34,6 @@
 #include "drivers/touch.h"
 #include "grlib/grlib.h"
 #include "grlib/widget.h"
-
 #include "ui/user_interface.h"
 #include "motor/motor_api.h"
 #include "sensors/sensor_api.h"
@@ -78,7 +68,7 @@ static char * getCurrentDateTime() {
         timeinfo->tm_hour -= 24;
         timeinfo->tm_mday +=1;
     }
-    strcpy(t, " "); // add an extra space
+    strcpy(t, "    "); // add an extra space
     strcpy(t, asctime(timeinfo));
     return t;
 }
@@ -99,7 +89,6 @@ void DrawDateTime() {
         GrStringDrawCentered(&sContext, getCurrentDateTime(), -1, 160, 8, true);
         GrFlush(&sContext);
         shouldDrawDateTime = false;
-        //drawDayNight(1);
     }
 }
 
@@ -192,7 +181,7 @@ bool setupSensorsAndGUI(uint32_t ui32SysClock) {
 }
 
 int main(void) {
-    /* Call board init functions */
+    // Call board init functions
     Board_initGeneral();
     Board_initGPIO();
     Board_initI2C();
@@ -200,7 +189,7 @@ int main(void) {
 
     PWM_init();
 
-    /* Set system clock */
+    // Set system clock
     uint32_t ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
             SYSCTL_OSC_MAIN | SYSCTL_USE_PLL |
             SYSCTL_CFG_VCO_480), 120000000);
@@ -220,7 +209,7 @@ int main(void) {
     // Setup GUI and sensors
     setupSensorsAndGUI(ui32SysClock);
 
-    /* Start BIOS */
+    // Start BIOS
     BIOS_start();
 
     return (0);

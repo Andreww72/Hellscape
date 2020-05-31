@@ -22,7 +22,7 @@ drivers/Kentec320x240x16_ssd2119_spi.obj: C:/ti/tivaware_c_series_2_1_4_178/driv
 drivers/Kentec320x240x16_ssd2119_spi.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom.h
 drivers/Kentec320x240x16_ssd2119_spi.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/pin_map.h
 drivers/Kentec320x240x16_ssd2119_spi.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h
-drivers/Kentec320x240x16_ssd2119_spi.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
+drivers/Kentec320x240x16_ssd2119_spi.obj: C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
 
 ../drivers/Kentec320x240x16_ssd2119_spi.c: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdint.h: 
@@ -46,4 +46,4 @@ C:/ti/tivaware_c_series_2_1_4_178/driverlib/timer.h:
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/pin_map.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 
+C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 

@@ -18,7 +18,7 @@ drivers/pinout.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/pin_map.h
 drivers/pinout.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom.h
 drivers/pinout.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom_map.h
 drivers/pinout.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/sysctl.h
-drivers/pinout.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/pinout.h
+drivers/pinout.obj: C:/Users/jshea/Documents/EGH456/drivers/pinout.h
 
 ../drivers/pinout.c: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdbool.h: 
@@ -38,4 +38,4 @@ C:/ti/tivaware_c_series_2_1_4_178/driverlib/pin_map.h:
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/rom_map.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/sysctl.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/pinout.h: 
+C:/Users/jshea/Documents/EGH456/drivers/pinout.h: 

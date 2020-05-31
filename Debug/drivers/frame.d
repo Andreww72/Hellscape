@@ -11,7 +11,7 @@ drivers/frame.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/includ
 drivers/frame.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/machine/_stdint.h
 drivers/frame.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/sys/_stdint.h
 drivers/frame.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h
-drivers/frame.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h
+drivers/frame.obj: C:/Users/jshea/Documents/EGH456/drivers/frame.h
 
 ../drivers/frame.c: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdbool.h: 
@@ -24,4 +24,4 @@ C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/machine/_types.h:
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/machine/_stdint.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/sys/_stdint.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h: 
+C:/Users/jshea/Documents/EGH456/drivers/frame.h: 

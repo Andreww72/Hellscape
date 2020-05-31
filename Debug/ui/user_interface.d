@@ -20,18 +20,18 @@ ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/in
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdio.h
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdarg.h
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdlib.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/constants.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/constants.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/gpio.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/interrupt.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/inc/hw_ints.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/canvas.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/pushbutton.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/pinout.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/touch.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/drivers/pinout.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/drivers/frame.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/drivers/touch.h
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Clock.h
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/std.h
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stddef.h
@@ -217,7 +217,7 @@ ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/pa
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/adc.h
 ui/user_interface.obj: C:/ti/tivaware_c_series_2_1_4_178/inc/hw_memmap.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/motor/motor_api.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/motor/motor_api.h
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/GPIO.h
@@ -226,14 +226,14 @@ ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Types
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IInstance.h
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/package/package.defs.h
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IGateProvider.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/ui/user_interface.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/sensors/sensor_api.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/motorlib.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/ui/user_interface.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/sensors/sensor_api.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/drivers/motorlib.h
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/pwm/PWMTimerTiva.h
 ui/user_interface.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/PWM.h
 ui/user_interface.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/Board.h
-ui/user_interface.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/EK_TM4C1294XL.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/Board.h
+ui/user_interface.obj: C:/Users/jshea/Documents/EGH456/EK_TM4C1294XL.h
 ui/user_interface.obj: ../ui/../sensors/opt3001/opt3001.h
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/math.h
 ui/user_interface.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/_defs.h
@@ -270,18 +270,18 @@ C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/xlocale/_time.h:
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdio.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdarg.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdlib.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/constants.h: 
+C:/Users/jshea/Documents/EGH456/constants.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 
+C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/gpio.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/interrupt.h: 
 C:/ti/tivaware_c_series_2_1_4_178/inc/hw_ints.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/canvas.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/pushbutton.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/pinout.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/touch.h: 
+C:/Users/jshea/Documents/EGH456/drivers/pinout.h: 
+C:/Users/jshea/Documents/EGH456/drivers/frame.h: 
+C:/Users/jshea/Documents/EGH456/drivers/touch.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Clock.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/std.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stddef.h: 
@@ -467,7 +467,7 @@ C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/E
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/adc.h: 
 C:/ti/tivaware_c_series_2_1_4_178/inc/hw_memmap.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/motor/motor_api.h: 
+C:/Users/jshea/Documents/EGH456/motor/motor_api.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/GPIO.h: 
@@ -476,14 +476,14 @@ C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Types.h:
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IInstance.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/package/package.defs.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IGateProvider.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/ui/user_interface.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/sensors/sensor_api.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/motorlib.h: 
+C:/Users/jshea/Documents/EGH456/ui/user_interface.h: 
+C:/Users/jshea/Documents/EGH456/sensors/sensor_api.h: 
+C:/Users/jshea/Documents/EGH456/drivers/motorlib.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/pwm/PWMTimerTiva.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/PWM.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/Board.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/EK_TM4C1294XL.h: 
+C:/Users/jshea/Documents/EGH456/Board.h: 
+C:/Users/jshea/Documents/EGH456/EK_TM4C1294XL.h: 
 ../ui/../sensors/opt3001/opt3001.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/math.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/_defs.h: 

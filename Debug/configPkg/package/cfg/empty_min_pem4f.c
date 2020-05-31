@@ -1518,7 +1518,7 @@ __FAR__ const xdc_SizeT ti_sysbios_knl_Task_Module_State_terminatedQ__O = offset
  *  Define absolute path prefix for this executable's
  *  configuration generated files.
  */
-xdc__META(__ASM__, "@(#)__ASM__ = D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/Debug/configPkg/package/cfg/empty_min_pem4f");
+xdc__META(__ASM__, "@(#)__ASM__ = C:/Users/jshea/Documents/EGH456/Debug/configPkg/package/cfg/empty_min_pem4f");
 
 /*
  *  ======== __ISA__ ========

@@ -338,11 +338,8 @@ bool initCurrent(uint16_t thresholdCurrent) {
 }
 
 void callbackTriggerAccelEStop(unsigned int index) {
-    System_printf("Accel callback\n");
-    System_flush();
-    //eStopMotor();
-    //eStopGUI();
-    // Clear BMI160 latched interrupt statusGPIOPinTypeGPIOInput
+    eStopMotor();
+    eStopGUI();
 }
 
 // ACCELERATION SETUP
@@ -431,6 +428,7 @@ float getPower() {
     for (i = 0; i < WINDOW_POW_CURR; i++) {
         sum += powerBuffer[i];
     }
+
     return (sum / (float)WINDOW_POW_CURR);
 }
 

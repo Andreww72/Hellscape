@@ -231,11 +231,11 @@ empty_min.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h
 empty_min.obj: ../ui/user_interface.h
 empty_min.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdio.h
 empty_min.obj: C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdlib.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/constants.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/constants.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h
 empty_min.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/canvas.h
 empty_min.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/pushbutton.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/drivers/frame.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Clock.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h
 empty_min.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/eeprom.h
@@ -268,7 +268,7 @@ empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IModule.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Event__epilogue.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h
 empty_min.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/adc.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/motor/motor_api.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/motor/motor_api.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/GateHwi.h
@@ -276,9 +276,9 @@ empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Types.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IInstance.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/package/package.defs.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IGateProvider.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/ui/user_interface.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/sensors/sensor_api.h
-empty_min.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/motorlib.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/ui/user_interface.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/sensors/sensor_api.h
+empty_min.obj: C:/Users/jshea/Documents/EGH456/drivers/motorlib.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/pwm/PWMTimerTiva.h
 empty_min.obj: C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/PWM.h
 empty_min.obj: C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h
@@ -533,11 +533,11 @@ C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h:
 ../ui/user_interface.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdio.h: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdlib.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/constants.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 
+C:/Users/jshea/Documents/EGH456/constants.h: 
+C:/Users/jshea/Documents/EGH456/drivers/Kentec320x240x16_ssd2119_spi.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/canvas.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/pushbutton.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/frame.h: 
+C:/Users/jshea/Documents/EGH456/drivers/frame.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Clock.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/eeprom.h: 
@@ -570,7 +570,7 @@ C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IModule.h:
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/knl/Event__epilogue.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/UART.h: 
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/adc.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/motor/motor_api.h: 
+C:/Users/jshea/Documents/EGH456/motor/motor_api.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/System.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/GateHwi.h: 
@@ -578,9 +578,9 @@ C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Types.h:
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IInstance.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/gates/package/package.defs.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/IGateProvider.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/ui/user_interface.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/sensors/sensor_api.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/motorlib.h: 
+C:/Users/jshea/Documents/EGH456/ui/user_interface.h: 
+C:/Users/jshea/Documents/EGH456/sensors/sensor_api.h: 
+C:/Users/jshea/Documents/EGH456/drivers/motorlib.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/pwm/PWMTimerTiva.h: 
 C:/ti/tirtos_tivac_2_16_00_08/products/tidrivers_tivac_2_16_00_08/packages/ti/drivers/PWM.h: 
 C:/ti/xdctools_3_32_00_06_core/packages/xdc/runtime/Error.h: 

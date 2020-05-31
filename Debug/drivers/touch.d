@@ -23,7 +23,7 @@ drivers/touch.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/sysctl.h
 drivers/touch.obj: C:/ti/tivaware_c_series_2_1_4_178/driverlib/timer.h
 drivers/touch.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h
 drivers/touch.obj: C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h
-drivers/touch.obj: D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/touch.h
+drivers/touch.obj: C:/Users/jshea/Documents/EGH456/drivers/touch.h
 
 ../drivers/touch.c: 
 C:/ti/ccs930/ccs/tools/compiler/ti-cgt-arm_18.12.4.LTS/include/stdbool.h: 
@@ -48,4 +48,4 @@ C:/ti/tivaware_c_series_2_1_4_178/driverlib/sysctl.h:
 C:/ti/tivaware_c_series_2_1_4_178/driverlib/timer.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/grlib.h: 
 C:/ti/tivaware_c_series_2_1_4_178/grlib/widget.h: 
-D:/EntireUniverse/UniStuff/2020/Semester1/Systems/Assignment/EGH456/drivers/touch.h: 
+C:/Users/jshea/Documents/EGH456/drivers/touch.h: 
