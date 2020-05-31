@@ -6,7 +6,7 @@
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 50
 #define SPEED_VAL_LOW 0
-#define SPEED_VAL_HIGH 6000
+#define SPEED_VAL_HIGH 7000
 #define ACCELERATION_VAL_LOW 0
 #define ACCELERATION_VAL_HIGH 30
 #define MOTOR_TEMP_VAL_LOW 0
@@ -385,7 +385,7 @@ static void decreaseSetting() {
         case current:
             if (motorCurrentLimit >= 50) {
                 doChangeToSetting(-50);
-                setThresholdTemp((uint16_t)motorTemperatureLimit);
+                setThresholdCurrent((uint16_t)motorCurrentLimit);
             }
             break;
         case acceleration:
@@ -554,14 +554,14 @@ static void DrawDataOnGraph(float lastSample)
 
     // Draw current value
     static char currentValue[30];
-    sprintf(currentValue, "%5.2f", lastSample);
+    sprintf(currentValue, "  %5.2f  ", lastSample);
     GrContextBackgroundSet(&sContext, 0x00595D69);
     GrContextForegroundSet(&sContext, ClrWhite);
     GrContextFontSet(&sContext, g_psFontCmss18b);
     tRectangle sRect;
-    sRect.i16XMin = 220;
+    sRect.i16XMin = 210;
     sRect.i16YMin = 25;
-    sRect.i16XMax = 255;
+    sRect.i16XMax = 265;
     sRect.i16YMax = 35;
     GrContextForegroundSet(&sContext, 0x00595D69);
     GrRectFill(&sContext, &sRect);
