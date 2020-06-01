@@ -2,7 +2,7 @@
 
 // Define the y-axis limits for the graphs
 #define POWER_VAL_LOW 0
-#define POWER_VAL_HIGH 2
+#define POWER_VAL_HIGH 30
 #define AMB_TEMP_VAL_LOW 0
 #define AMB_TEMP_VAL_HIGH 50
 #define SPEED_VAL_LOW 0

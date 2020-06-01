@@ -18,3 +18,4 @@ src
 /Release/
 .config/
 .settings/
+/Debug/

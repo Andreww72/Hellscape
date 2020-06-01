@@ -11,6 +11,7 @@
 #define ADC_GAIN            10.0 // FAQ
 #define ADC_RESOLUTION      4095.0 // Page 1861 says resolution 12 bits
 #define CURR_CHECK_TICKS    250
+#define MOTOR_VOLTAGE       24.0
 
 // Data window size constants
 #define WINDOW_LIGHT        6
@@ -177,8 +178,8 @@ void swiCurrent() {
 
     // Save power for graphing
     static uint8_t powerHead = 0;
-    // P = V * I     using avg of the voltages
-    float power = current * ((V_OutB + V_OutC) / 2);
+    // P = V * I
+    float power = MOTOR_VOLTAGE * current;
     powerBuffer[powerHead++] = power;
     powerHead %= WINDOW_POW_CURR; // windowCurrent deliberate
 
