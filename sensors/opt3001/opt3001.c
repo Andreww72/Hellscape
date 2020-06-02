@@ -46,7 +46,6 @@ bool OPT3001Test(I2C_Handle i2c) {
     if (val != DEVICE_ID) {
         return false;
     }
-
     return true;
 }
 
@@ -69,8 +68,6 @@ bool OPT3001ReadLight(I2C_Handle i2c, uint16_t *rawData) {
 	return success;
 }
 
-
-
 void OPT3001Convert(uint16_t rawData, float *convertedLux) {
 	uint16_t e, m;
 
@@ -78,7 +75,6 @@ void OPT3001Convert(uint16_t rawData, float *convertedLux) {
 	e = (rawData & 0xF000) >> 12;
 	*convertedLux = m * (0.01 * exp2(e));
 }
-
 
 bool OPT3001WriteI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     I2C_Transaction i2cTransaction;
@@ -96,7 +92,6 @@ bool OPT3001WriteI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *d
     I2C_transfer(i2c, &i2cTransaction);
     return true;
 }
-
 
 bool OPT3001ReadI2C(I2C_Handle i2c, uint8_t ui8Addr, uint8_t ui8Reg, uint8_t *data) {
     I2C_Transaction i2cTransaction;

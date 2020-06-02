@@ -32,7 +32,7 @@
 bool BMI160Init(I2C_Handle i2c) {
     uint8_t conf;
 
-    // BMI160_ACC_CONF_REG -> Page 83 of BMI160
+    // BMI160_CMD_REG -> Page 83 of BMI160
     conf = 0b00010001; // Start up in normal mode
     BMI160WriteI2C(i2c, BMI160_I2C_ADDR, BMI160_CMD_REG, &conf);
     Task_sleep(5);

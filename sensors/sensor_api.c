@@ -129,7 +129,7 @@ void taskTemp() {
         tempHead %= WINDOW_TEMP;
 
         // Check if temperature threshold exceeded
-        if (motorTemp > glThresholdTemp) {
+        if (getMotorTemp() > glThresholdTemp) {
             eStopMotor();
             eStopGUI();
         }
@@ -186,18 +186,11 @@ void swiCurrent() {
     // Check if filtered current exceeds threshold
     // Don't check every cycle, too expensive
     countCurrentTicks++;
-    if (countCurrentTicks > 250) {
+    if (countCurrentTicks > 50) {
         countCurrentTicks = 0;
 
         // Check if current limit exceeded
-        float sum = 0;
-        uint8_t i;
-        for (i = 0; i < WINDOW_POW_CURR; i++) {
-            sum += currentBuffer[i];
-        }
-        float avgCurrent = sum / WINDOW_POW_CURR;
-
-        if (avgCurrent > glThresholdCurrent) {
+        if (getCurrent() > glThresholdCurrent) {
             eStopMotor();
             eStopGUI();
         }
@@ -231,14 +224,8 @@ void taskAcceleration() {
         } else {
             current_accel = fabs(sqrt(sum));
         }
-
         accelerationBuffer[accel_head++] = current_accel;
         accel_head %= WINDOW_ACCEL;
-
-        if (current_accel > glThresholdAccel){
-            eStopMotor();
-            eStopGUI();
-        }
     }
 }
 
@@ -346,8 +333,8 @@ void callbackTriggerAccelEStop(unsigned int index) {
 // ACCELERATION SETUP
 // Initialise sensors for acceleration on all three axes
 bool initAcceleration(uint16_t thresholdAccel) {
-    setThresholdAccel(thresholdAccel);
     BMI160Init(sensori2c);
+    setThresholdAccel(thresholdAccel);
 
     // Create D4 GPIO interrupt
     GPIO_setCallback(Board_BMI160_INT, callbackTriggerAccelEStop);
