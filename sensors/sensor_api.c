@@ -16,7 +16,7 @@
 // Data window size constants
 #define WINDOW_LIGHT        6
 #define WINDOW_TEMP         4
-#define WINDOW_POW_CURR     10
+#define WINDOW_CURRENT     10
 #define WINDOW_ACCEL        6
 #define RATE_LIGHT          500 // 2Hz
 #define RATE_TEMP           500 // 2Hz
@@ -27,8 +27,7 @@
 float lightBuffer[WINDOW_LIGHT];
 float boardTempBuffer[WINDOW_TEMP];
 float motorTempBuffer[WINDOW_TEMP];
-float currentBuffer[WINDOW_POW_CURR];
-float powerBuffer[WINDOW_POW_CURR];
+float currentBuffer[WINDOW_CURRENT];
 float accelerationBuffer[WINDOW_ACCEL];
 
 // Current thresholds that trigger eStop
@@ -174,14 +173,9 @@ void swiCurrent() {
     static uint8_t currentHead = 0;
     float current = (currentSensorB + currentSensorC) * 3 / 2;
     currentBuffer[currentHead++] = current;
-    currentHead %= WINDOW_POW_CURR;
+    currentHead %= WINDOW_CURRENT;
 
-    // Save power for graphing
-    static uint8_t powerHead = 0;
-    // P = V * I
-    float power = MOTOR_VOLTAGE * current;
-    powerBuffer[powerHead++] = power;
-    powerHead %= WINDOW_POW_CURR; // windowCurrent deliberate
+    // Power is returned by getPower() which gets filtered current * MOTOR_VOLTAGE
 
     // Check if filtered current exceeds threshold
     // Don't check every cycle, too expensive
@@ -403,21 +397,20 @@ float getCurrent() {
     float sum = 0;
     uint8_t i;
 
-    for (i = 0; i < WINDOW_POW_CURR; i++) {
+    for (i = 0; i < WINDOW_CURRENT; i++) {
         sum += currentBuffer[i];
     }
-    return (sum / (float)WINDOW_POW_CURR);
+    return (sum / (float)WINDOW_CURRENT);
 }
 
 float getPower() {
     float sum = 0;
     uint8_t i;
 
-    for (i = 0; i < WINDOW_POW_CURR; i++) {
-        sum += powerBuffer[i];
+    for (i = 0; i < WINDOW_CURRENT; i++) {
+        sum += currentBuffer[i];
     }
-
-    return (sum / (float)WINDOW_POW_CURR);
+    return (sum * MOTOR_VOLTAGE / (float)WINDOW_CURRENT);
 }
 
 float getAcceleration() {
@@ -427,7 +420,6 @@ float getAcceleration() {
     for(i = 0; i < WINDOW_ACCEL; i++){
         s += accelerationBuffer[i];
     }
-
     return s/(float)WINDOW_ACCEL;
 }
 
