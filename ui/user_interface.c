@@ -36,8 +36,8 @@ int motorState = 0;
 int homeScreenFlag = 1;
 
 // EEPROM settings
-uint32_t e2prom_write_settings[4] = {30, 2500, 1500, 20}; /* Write struct: Temp | Speed | Current | Accel */
-uint32_t e2prom_read_settings[4] =  {30, 2500, 1500, 20}; /* Read struct */
+uint32_t e2prom_write_settings[5] = {30, 2500, 1500, 20, 1}; /* Write struct: Temp | Speed | Current | Accel | Special value */
+uint32_t e2prom_read_settings[5] =  {30, 2500, 1500, 20, 1}; /* Read struct */
 
 // GUI - Canvas Drawing
 // Set/Graph Menu Selection
@@ -642,6 +642,11 @@ void setupEEPROM() {
 
     // If nothing in EEPROM, set to default
     if (e2prom_read_settings[0] == EEPROM_EMPTY) {
+        EEPROMProgram((uint32_t *)&e2prom_write_settings, E2PROM_ADRES, sizeof(e2prom_write_settings)); //Write struct to EEPROM start from 0x0000
+    }
+    // If EEPROM had other stuff in it. Detected using test against special value
+    if (e2prom_read_settings[4] != 1) {
+        EEPROMMassErase();
         EEPROMProgram((uint32_t *)&e2prom_write_settings, E2PROM_ADRES, sizeof(e2prom_write_settings)); //Write struct to EEPROM start from 0x0000
     }
 
